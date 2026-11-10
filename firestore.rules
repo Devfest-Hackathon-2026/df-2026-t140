@@ -1,0 +1,192 @@
+rules_version = '2';
+
+// データの形は web/src/entities/<データ>/model/types.ts と functions/src/domain/<データ>.ts、
+// 確認は scripts/smoke.mjs。そろえて変える。
+//
+// 書ける人（技術構成の「参加と権限」）
+//   各端末        旅行、自分のメンバー情報、希望、自分の投票（本人とメンバーに限定）
+//   Functions だけ ピン、ルート案、模型の JSON、旅行の状態と決定したルート（Admin SDK はルールを通らない）
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function tripPath(tripId) {
+      return /databases/$(database)/documents/trips/$(tripId);
+    }
+
+    function memberPath(tripId, uid) {
+      return /databases/$(database)/documents/trips/$(tripId)/members/$(uid);
+    }
+
+    function votePath(tripId, routeId, uid) {
+      return /databases/$(database)/documents/trips/$(tripId)/routes/$(routeId)/votes/$(uid);
+    }
+
+    function isMember(tripId) {
+      return signedIn() && exists(memberPath(tripId, request.auth.uid));
+    }
+
+    function isDate(value) {
+      return value is string && value.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$');
+    }
+
+    // パスに埋め込むので、ID に使える文字だけを通す
+    function isId(value) {
+      return value is string && value.matches('^[A-Za-z0-9_-]{1,64}$');
+    }
+
+    function validTripInfo(data) {
+      return data.title is string && data.title.size() >= 1 && data.title.size() <= 40
+        && isDate(data.startDate)
+        && (data.endDate == null || (isDate(data.endDate) && data.endDate >= data.startDate))
+        && data.origin is string && data.origin.size() >= 1 && data.origin.size() <= 40;
+    }
+
+    function validMemberProfile(data) {
+      return data.displayName is string && data.displayName.size() >= 1 && data.displayName.size() <= 20
+        && data.color is string && data.color.matches('^#[0-9a-fA-F]{6}$');
+    }
+
+    function validBounds(bounds) {
+      return bounds.keys().hasOnly(['north', 'south', 'east', 'west'])
+        && bounds.keys().hasAll(['north', 'south', 'east', 'west'])
+        && bounds.north is number && bounds.north >= -90 && bounds.north <= 90
+        && bounds.south is number && bounds.south >= -90 && bounds.south <= 90
+        && bounds.east is number && bounds.east >= -180 && bounds.east <= 180
+        && bounds.west is number && bounds.west >= -180 && bounds.west <= 180;
+    }
+
+    function isPlanning(tripId) {
+      return get(tripPath(tripId)).data.status == 'planning';
+    }
+
+    // 投票の記録（votes）と members の votedRouteId は、同じ書き込みの中で必ずそろえる。
+    // これで 1 人 1 票になる。票を変えるときは、古い票の削除、新しい票の作成、votedRouteId の更新を 1 回で行う。
+    // 票を入れる、変える、取り消すのは計画中だけ。決定したあとは、決め手になった票を動かせない。
+    function voteMovedCorrectly(tripId, uid, before, after) {
+      return before == after
+        || (isPlanning(tripId)
+          && (after == null || (isId(after) && existsAfter(votePath(tripId, after, uid))))
+          && (before == null || !existsAfter(votePath(tripId, before, uid))));
+    }
+
+    // 旅の一覧用。自分のメンバー情報だけを、旅をまたいで集められる（collection group）。
+    // 問い合わせには where('uid', '==', 自分) が要る。
+    match /{path=**}/members/{uid} {
+      allow read: if signedIn() && resource.data.uid == request.auth.uid;
+    }
+
+    match /trips/{tripId} {
+      // 一覧（list）は許さない。旅行 ID を知っていて、メンバーである人だけが読める
+      allow get: if isMember(tripId);
+
+      // 作る人は、同じ書き込みで自分をメンバーに入れる
+      allow create: if signedIn()
+        && request.resource.data.keys().hasOnly(
+          ['title', 'startDate', 'endDate', 'origin', 'status', 'decidedRouteId', 'createdBy', 'createdAt', 'updatedAt'])
+        && request.resource.data.keys().hasAll(
+          ['title', 'startDate', 'endDate', 'origin', 'status', 'decidedRouteId', 'createdBy', 'createdAt', 'updatedAt'])
+        && validTripInfo(request.resource.data)
+        && request.resource.data.status == 'planning'
+        && request.resource.data.decidedRouteId == null
+        && request.resource.data.createdBy == request.auth.uid
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time
+        && existsAfter(memberPath(tripId, request.auth.uid));
+
+      // メンバーなら誰でも基本情報を直せる（幹事だけにしない）。状態と決定したルートは Functions だけ
+      allow update: if isMember(tripId)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(
+          ['title', 'startDate', 'endDate', 'origin', 'updatedAt'])
+        && validTripInfo(request.resource.data)
+        && request.resource.data.updatedAt == request.time;
+
+      match /members/{uid} {
+        // 自分の分は、参加前でも「まだメンバーではない」と分かるように読める
+        allow get: if signedIn() && (request.auth.uid == uid || isMember(tripId));
+        allow list: if isMember(tripId);
+
+        // 招待 URL（旅行 ID）を知っていれば、自分を足して参加できる
+        allow create: if signedIn()
+          && request.auth.uid == uid
+          && existsAfter(tripPath(tripId))
+          && request.resource.data.keys().hasOnly(['uid', 'displayName', 'color', 'votedRouteId', 'joinedAt'])
+          && request.resource.data.keys().hasAll(['uid', 'displayName', 'color', 'votedRouteId', 'joinedAt'])
+          && request.resource.data.uid == uid
+          && validMemberProfile(request.resource.data)
+          && request.resource.data.votedRouteId == null
+          && request.resource.data.joinedAt == request.time;
+
+        allow update: if signedIn()
+          && request.auth.uid == uid
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['displayName', 'color', 'votedRouteId'])
+          && validMemberProfile(request.resource.data)
+          && voteMovedCorrectly(tripId, uid, resource.data.votedRouteId, request.resource.data.votedRouteId);
+
+        // 旅から抜ける。票が残らないよう、投票済みなら同じ書き込みで票も消す
+        allow delete: if signedIn()
+          && request.auth.uid == uid
+          && (resource.data.votedRouteId == null
+            || !existsAfter(votePath(tripId, resource.data.votedRouteId, uid)));
+      }
+
+      match /wishes/{wishId} {
+        allow read: if isMember(tripId);
+        allow create: if isMember(tripId)
+          && request.resource.data.keys().hasOnly(['uid', 'text', 'bounds', 'status', 'createdAt'])
+          && request.resource.data.keys().hasAll(['uid', 'text', 'bounds', 'status', 'createdAt'])
+          && request.resource.data.uid == request.auth.uid
+          && request.resource.data.text is string
+          && request.resource.data.text.size() >= 1
+          && request.resource.data.text.size() <= 100
+          && (request.resource.data.bounds == null || validBounds(request.resource.data.bounds))
+          && request.resource.data.status == 'pending'
+          && request.resource.data.createdAt == request.time;
+      }
+
+      // ピンと模型は Functions だけが書く（AI の結果を改ざんさせない）
+      match /pins/{pinId} {
+        allow read: if isMember(tripId);
+
+        match /model/{modelId} {
+          allow read: if isMember(tripId);
+        }
+      }
+
+      // ルート案は Functions だけが書く
+      match /routes/{routeId} {
+        allow read: if isMember(tripId);
+
+        match /votes/{uid} {
+          allow read: if isMember(tripId);
+
+          // 計画中だけ投票できる。members の votedRouteId も同じ書き込みでこのルートにする
+          allow create: if isMember(tripId)
+            && request.auth.uid == uid
+            && request.resource.data.keys().hasOnly(['uid', 'createdAt'])
+            && request.resource.data.keys().hasAll(['uid', 'createdAt'])
+            && request.resource.data.uid == uid
+            && request.resource.data.createdAt == request.time
+            && exists(/databases/$(database)/documents/trips/$(tripId)/routes/$(routeId))
+            && isPlanning(tripId)
+            && getAfter(memberPath(tripId, uid)).data.votedRouteId == routeId;
+
+          // 消せるのは、旅から抜けるとき（いつでも）と、計画中に票を変える・取り消すときだけ
+          allow delete: if signedIn()
+            && request.auth.uid == uid
+            && (!existsAfter(memberPath(tripId, uid))
+              || (isPlanning(tripId) && getAfter(memberPath(tripId, uid)).data.votedRouteId != routeId));
+        }
+      }
+    }
+
+    // 合言葉を通した人の記録。書くのは Functions（features/unlock-ai）だけ。本人だけが読める（画面で「本物の AI が使える」と出す）
+    match /aiAccess/{uid} {
+      allow get: if signedIn() && request.auth.uid == uid;
+    }
+
+    // ここに書いていないもの（modelCache、usage など）はすべて拒否される
+  }
+}

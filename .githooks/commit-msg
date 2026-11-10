@@ -1,0 +1,5 @@
+#!/bin/sh
+# ハーネスの git hooks。本体は scripts/harness/git-hook.mjs（Windows と macOS で同じ動きにするため Node で書いている）。
+# node が見つからない環境（GUI の git クライアントなど）では止めずに通す。CI が同じことを確かめる。
+command -v node >/dev/null 2>&1 || { echo "[ハーネス] node が見つからないので commit-msg を飛ばしました（CI で確かめます）" >&2; exit 0; }
+exec node "$(git rev-parse --show-toplevel)/scripts/harness/git-hook.mjs" commit-msg "$@"

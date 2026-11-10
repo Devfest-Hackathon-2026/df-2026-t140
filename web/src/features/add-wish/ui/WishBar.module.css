@@ -1,0 +1,111 @@
+/* やりたいことを書く欄。地図の上に浮かべる（背景はない。地図が主役） */
+.bar {
+  display: grid;
+  /*
+   * 中身の幅で広がらないようにする。下の操作欄（flex）の中では、最小の幅が中身の幅になるので、
+   * Safari では横に送る例の行の全部の幅まで欄が広がり、画面の右にはみ出していた
+   */
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-2);
+  width: 100%;
+  min-width: 0;
+  padding: 0 var(--space-3) calc(var(--space-3) + env(safe-area-inset-bottom));
+}
+
+.bar > p {
+  width: max-content;
+  max-width: 100%;
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-m);
+  background: var(--color-surface);
+}
+
+/* 書き出しの例。横に並べ、入りきらなければ横に送る */
+.examples {
+  display: flex;
+  gap: var(--space-2);
+  overflow-x: auto;
+  margin: 0 calc(-1 * var(--space-3));
+  padding: 0 var(--space-3) var(--edge-depth);
+  scrollbar-width: none;
+}
+
+.examples::-webkit-scrollbar {
+  display: none;
+}
+
+.example {
+  flex: none;
+  min-height: 40px;
+  padding: 0 var(--space-4);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface);
+  box-shadow: 0 3px 0 var(--color-edge);
+  font-size: var(--font-size-s);
+  font-weight: var(--font-weight-heading);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.example:active {
+  transform: translateY(3px);
+  box-shadow: none;
+}
+
+/* 入力欄と、緑の「さがす」ボタンをひとつの枠に入れる */
+.field {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 64px;
+  margin-bottom: var(--edge-depth);
+  padding: 6px 6px 6px var(--space-5);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-l);
+  background: var(--color-surface);
+  box-shadow: 0 var(--edge-depth) 0 var(--color-edge);
+}
+
+.field:focus-within {
+  border-color: var(--color-go);
+}
+
+.input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  outline: none;
+  background: none;
+  /* 16px より小さいと、iPhone で入力のときに画面が拡大される */
+  font-size: 17px;
+  font-weight: var(--font-weight-bold);
+}
+
+.input::placeholder {
+  color: var(--color-text-sub);
+}
+
+.search {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 48px;
+  margin-bottom: var(--edge-depth);
+  border: none;
+  border-radius: var(--radius-m);
+  background: var(--color-go);
+  color: var(--color-text-on-color);
+  box-shadow: 0 var(--edge-depth) 0 var(--color-go-edge);
+  cursor: pointer;
+}
+
+.search:active:not(:disabled) {
+  transform: translateY(var(--edge-depth));
+  box-shadow: none;
+}
+
+.search:disabled {
+  opacity: 0.6;
+}

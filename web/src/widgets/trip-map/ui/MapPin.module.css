@@ -1,0 +1,56 @@
+/* 地図の上の印。親は、その場所を指す大きさ 0 の点（PlainSurface の .anchor、GoogleSurface の .anchor） */
+
+.pin {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  transform: translateX(-50%);
+  display: block;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  pointer-events: auto;
+  transition: transform 80ms ease-out;
+}
+
+.pin:active {
+  transform: translateX(-50%) translateY(2px);
+}
+
+/* 名札。押せるものと同じ縁（ここは表示だけ） */
+.label {
+  position: absolute;
+  top: 6px;
+  left: 0;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  width: max-content;
+  max-width: 170px;
+  padding: 2px 10px;
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-family: var(--font-family);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-heading);
+  line-height: 1.5;
+  pointer-events: none;
+}
+
+.name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 選んでいるピンの名札は、濃い地に白い文字 */
+.labelSelected {
+  border-color: var(--color-text);
+  background: var(--color-text);
+  color: var(--color-text-on-color);
+  font-size: var(--font-size-s);
+}

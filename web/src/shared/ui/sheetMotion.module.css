@@ -1,0 +1,63 @@
+/*
+ * 下から出るシート（しおり、場所の情報）の動き。sheetMotion.ts が段階ごとに 1 つを選ぶ。
+ * 開くときは上がり、閉じるときは下がる（ヨウキンが 2026-11-07 に決めた）。
+ * --peek-visible は、閉じた状態で見えている高さ（シートの部品が測って渡す）
+ */
+
+/* 開いた：画面の下から上がってくる */
+.open {
+  animation: sheet-open 380ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* 閉じた状態から開いた：上の部分の位置から上がる */
+.expand {
+  animation: sheet-expand 340ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* 場所の情報で、しおりの前後の場所へ移った：少しだけ上がる（移ったことが分かる程度） */
+.switch {
+  animation: sheet-switch 200ms ease-out;
+}
+
+/* 閉じる途中：上の部分だけ残る位置まで下がる。終わったら閉じた状態に切り替わる */
+.closing {
+  animation: sheet-close 300ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  pointer-events: none;
+}
+
+@keyframes sheet-open {
+  from {
+    transform: translateY(100%);
+  }
+}
+
+@keyframes sheet-expand {
+  from {
+    transform: translateY(calc(100% - var(--peek-visible)));
+  }
+}
+
+@keyframes sheet-switch {
+  from {
+    transform: translateY(16px);
+  }
+}
+
+/* 指で下げて離したときは、下げた位置（--sheet-drag-from）から閉じる動きを続ける */
+@keyframes sheet-close {
+  from {
+    transform: translateY(var(--sheet-drag-from, 0px));
+  }
+  to {
+    transform: translateY(calc(100% - var(--peek-visible)));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .open,
+  .expand,
+  .switch,
+  .closing {
+    animation: none;
+  }
+}

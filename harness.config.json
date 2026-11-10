@@ -1,0 +1,6 @@
+{
+  "$comment": "ハーネスの設定。autonomousUntil までは、AI は人の許可を待たずに進めてよい（ハーネスの ask を通す。deny は変わらない）。変えるのは人。記録は record のファイル。",
+  "autonomousUntil": "2026-11-08T10:00:00+09:00",
+  "decidedBy": "Takana",
+  "record": "todo/humans/2026-11-07-overnight-autonomy.md"
+}

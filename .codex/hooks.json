@@ -1,0 +1,30 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup|resume|clear|compact",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$(git rev-parse --show-toplevel)/scripts/harness/hook.mjs\" codex session-start",
+            "commandWindows": "node scripts/harness/hook.mjs codex session-start",
+            "timeout": 30
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "^(Bash|apply_patch|Edit|Write)$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$(git rev-parse --show-toplevel)/scripts/harness/hook.mjs\" codex pre-tool",
+            "commandWindows": "node scripts/harness/hook.mjs codex pre-tool",
+            "timeout": 20
+          }
+        ]
+      }
+    ]
+  }
+}

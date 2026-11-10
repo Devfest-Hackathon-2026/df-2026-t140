@@ -1,0 +1,18 @@
+/** 文字をコピーする。できたら true */
+export async function copyText(text: string): Promise<boolean> {
+  try {
+    await navigator.clipboard.writeText(text)
+    return true
+  } catch {
+    // HTTP で開いたスマホなど、Clipboard API が使えない環境
+    const area = document.createElement('textarea')
+    area.value = text
+    area.style.position = 'fixed'
+    area.style.opacity = '0'
+    document.body.append(area)
+    area.select()
+    const copied = document.execCommand('copy')
+    area.remove()
+    return copied
+  }
+}

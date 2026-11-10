@@ -1,0 +1,15 @@
+{
+  "verdict": [
+    "REQUEST_CHANGES"
+  ],
+  "must_find": [
+    {
+      "rubric": [
+        "R4",
+        "R6",
+        "R7"
+      ],
+      "min_severity": "major"
+    }
+  ]
+}

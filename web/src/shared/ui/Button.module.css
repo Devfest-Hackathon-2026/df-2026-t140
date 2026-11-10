@@ -1,0 +1,144 @@
+/* 押せるものの共通の形：2px の縁と、下に厚み。押すと沈む（案 A）。 */
+.button {
+  --button-bg: var(--color-surface);
+  --button-text: var(--color-text);
+  --button-border: var(--color-border);
+  --button-edge: var(--color-edge);
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-height: var(--tap-size);
+  padding: 0 var(--space-4);
+  border: var(--border-width) solid var(--button-border);
+  border-radius: var(--radius-m);
+  background: var(--button-bg);
+  color: var(--button-text);
+  box-shadow: 0 var(--edge-depth) 0 var(--button-edge);
+  margin-bottom: var(--edge-depth);
+  font-weight: var(--font-weight-heading);
+  font-size: var(--font-size-m);
+  line-height: 1.2;
+  text-align: center;
+  cursor: pointer;
+  user-select: none;
+  transition:
+    transform 60ms ease-out,
+    box-shadow 60ms ease-out;
+}
+
+.button:active:not(:disabled) {
+  transform: translateY(var(--edge-depth));
+  box-shadow: 0 0 0 var(--button-edge);
+}
+
+.button:disabled {
+  --button-bg: var(--color-border);
+  --button-text: var(--color-text-sub);
+  --button-border: var(--color-border);
+  --button-edge: var(--color-edge);
+
+  cursor: not-allowed;
+}
+
+.go {
+  --button-bg: var(--color-go);
+  --button-text: var(--color-text-on-color);
+  --button-border: var(--color-go);
+  --button-edge: var(--color-go-edge);
+}
+
+.build {
+  --button-bg: var(--color-build);
+  --button-text: var(--color-text-on-color);
+  --button-border: var(--color-build);
+  --button-edge: var(--color-build-edge);
+}
+
+.route {
+  --button-bg: var(--color-route);
+  --button-text: var(--color-text-on-color);
+  --button-border: var(--color-route);
+  --button-edge: var(--color-route-edge);
+}
+
+/* 薄い緑の地。主役ではない「進む」系の操作に使う */
+.soft {
+  --button-bg: var(--color-go-soft);
+  --button-text: var(--color-go-edge);
+  --button-border: var(--color-go-soft);
+  --button-edge: var(--color-go-soft);
+
+  box-shadow: none;
+  margin-bottom: 0;
+}
+
+.soft:active:not(:disabled) {
+  transform: none;
+  filter: brightness(0.96);
+}
+
+/* 縁も厚みもない、文字だけのボタン */
+.text,
+.danger {
+  --button-bg: transparent;
+  --button-border: transparent;
+
+  box-shadow: none;
+  margin-bottom: 0;
+  min-height: 44px;
+  font-weight: var(--font-weight-bold);
+}
+
+.text {
+  --button-text: var(--color-text-sub);
+}
+
+.danger {
+  --button-text: var(--color-danger);
+}
+
+.text:active:not(:disabled),
+.danger:active:not(:disabled) {
+  transform: none;
+  opacity: 0.6;
+}
+
+.large {
+  min-height: 60px;
+  border-radius: var(--radius-l);
+  font-size: 18px;
+}
+
+.small {
+  min-height: 40px;
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-s);
+  font-size: var(--font-size-s);
+}
+
+.block {
+  display: flex;
+  width: 100%;
+}
+
+/* 正方形のアイコンだけのボタン */
+.icon {
+  width: var(--tap-size);
+  min-width: var(--tap-size);
+  padding: 0;
+}
+
+/* 点線の縁。「足す」系の入口に使う */
+.dashed {
+  border-style: dashed;
+  box-shadow: none;
+  margin-bottom: 0;
+  background: transparent;
+}
+
+.dashed:active:not(:disabled) {
+  transform: none;
+  background: var(--color-surface);
+}

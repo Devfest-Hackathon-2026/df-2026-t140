@@ -1,0 +1,1 @@
+export { tallyVotes } from './handler'

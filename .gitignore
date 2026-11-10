@@ -20,6 +20,7 @@ build/
 out/
 .next/
 .wrangler/
+.firebase/
 __pycache__/
 *.pyc
 .venv/
@@ -32,3 +33,24 @@ Thumbs.db
 .vscode/*
 !.vscode/extensions.json
 *.log
+
+# 個人の Claude Code 設定
+.claude/settings.local.json
+
+# 開発開始前の検証コードは本番リポジトリへ持ち込まない（ルールで禁止）
+poc/
+
+# ローカル専用の資料（運営資料など。再配布しない）
+.local/
+
+# Firebase
+functions/lib/
+
+# ハーネスの手元の記録（トレース、レビューパック、評価の結果）
+.harness/
+
+# AI の隔離用 worktree（Claude Code が作る。別ブランチの作業ツリーで、追跡しない）
+.claude/worktrees/
+
+# yomiyasu の検査の記録（推敲のたびに作られる。語の一覧 .yomiyasu-words/ は入れてよい）
+.yomiyasu/

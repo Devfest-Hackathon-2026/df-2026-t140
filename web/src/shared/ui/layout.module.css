@@ -1,0 +1,92 @@
+/* 地図のない画面の枠。スマホ幅を前提に、広い画面では中央に寄せる */
+.screen {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  width: 100%;
+  max-width: 480px;
+  min-height: 100dvh;
+  margin: 0 auto;
+  padding: calc(var(--space-4) + env(safe-area-inset-top)) var(--space-4)
+    calc(var(--space-5) + env(safe-area-inset-bottom));
+}
+
+.card {
+  display: grid;
+  gap: var(--space-4);
+  padding: var(--space-5) var(--space-4);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-l);
+  background: var(--color-surface);
+}
+
+/* 画面の下から出るシート。操作は親指の届く下半分に置く */
+.sheet {
+  display: grid;
+  gap: var(--space-4);
+  width: 100%;
+  max-height: 100%;
+  overflow-y: auto;
+  padding: var(--space-5) var(--space-4) calc(var(--space-4) + env(safe-area-inset-bottom));
+  border: var(--border-width) solid var(--color-border);
+  border-bottom: none;
+  border-radius: var(--radius-sheet) var(--radius-sheet) 0 0;
+  background: var(--color-surface);
+  box-shadow: var(--shadow-float);
+}
+
+.sheetHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.sheetTitle {
+  font-size: 24px;
+}
+
+.sheetLead {
+  margin-top: var(--space-1);
+  font-size: var(--font-size-s);
+  color: var(--color-text-sub);
+}
+
+.center {
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: var(--space-3);
+  min-height: 100dvh;
+  padding: var(--space-5);
+  color: var(--color-text-sub);
+  font-weight: var(--font-weight-bold);
+  text-align: center;
+}
+
+.spinner {
+  width: 36px;
+  height: 36px;
+  border: 4px solid var(--color-border);
+  border-top-color: var(--color-go);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spinner {
+    animation-duration: 3s;
+  }
+}
+
+.error {
+  color: var(--color-danger);
+  font-size: var(--font-size-s);
+  font-weight: var(--font-weight-bold);
+}

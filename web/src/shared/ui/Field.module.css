@@ -1,0 +1,65 @@
+.field {
+  display: grid;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.labelRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.label {
+  font-weight: var(--font-weight-heading);
+  font-size: var(--font-size-s);
+}
+
+.small .label {
+  font-weight: var(--font-weight-bold);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-sub);
+}
+
+.aside {
+  font-weight: var(--font-weight-heading);
+  font-size: var(--font-size-s);
+  color: var(--color-go-edge);
+}
+
+.hint {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-sub);
+}
+
+.input {
+  width: 100%;
+  min-width: 0;
+  min-height: var(--tap-size);
+  padding: 0 var(--space-4);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-m);
+  background: var(--color-surface-sunken);
+  /* iPhone で入力時に画面が拡大されないよう、16px 以上にする */
+  font-size: var(--font-size-m);
+  font-weight: var(--font-weight-bold);
+  appearance: none;
+}
+
+.input::placeholder {
+  color: var(--color-text-sub);
+  font-weight: var(--font-weight-body);
+  opacity: 0.8;
+}
+
+.input:focus {
+  outline: none;
+  border-color: var(--color-go);
+  background: var(--color-surface);
+}
+
+.input[type='date'] {
+  padding: 0 var(--space-2);
+  letter-spacing: -0.03em;
+}

@@ -1,0 +1,1 @@
+export { placeReviews } from './handler'

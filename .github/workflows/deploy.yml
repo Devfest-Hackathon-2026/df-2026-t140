@@ -1,0 +1,67 @@
+name: Deploy
+
+# 本番へ出すのは、人が main を deploy ブランチへ反映したときだけ。main への merge では出ない
+# （かめの決定：todo/humans/2026-11-07-deploy-branch.md。main の確認は ci.yml の verify が行う）。
+# 反映の手順は docs/process/setup.md の「本番への反映」。AI は deploy へ push しない（ガードの no-push-deploy）
+on:
+  push:
+    branches: [deploy]
+  # 手動で出し直すとき。Use workflow from で deploy を選ぶ（ほかのブランチでは下の if で止まる）
+  workflow_dispatch:
+
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  deploy:
+    # deploy ブランチ以外からは出さない（Workload Identity の条件も deploy からの実行に合わせる。scripts/setup-cicd.sh）
+    if: github.ref == 'refs/heads/deploy'
+    runs-on: ubuntu-latest
+    env:
+      # ブラウザ用の Maps キー。リファラと API を制限してある。リポジトリには置かない
+      VITE_GOOGLE_MAPS_API_KEY: ${{ secrets.GOOGLE_MAPS_API_KEY }}
+      VITE_GOOGLE_MAPS_MAP_ID: ${{ vars.GOOGLE_MAPS_MAP_ID }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .tool-versions
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '21'
+      - run: npm run setup
+      # 本番へ出す前に、ローカルと同じ確認を通す
+      - run: npm run verify
+      # 関数の環境変数。Cloud の Gemini（vertex）の切り替えと合言葉は人が GitHub の variable と secret に入れる
+      # （todo/humans/2026-11-07-vertex-gemini-passphrase.md）。どちらも空なら、固定の応答のままで合言葉は使えない。
+      # 値はリポジトリに置かず、デプロイのときだけ関数の設定ファイルに書く
+      - run: node scripts/write-functions-env.mjs
+        env:
+          GEMINI_PROVIDER: ${{ vars.GEMINI_PROVIDER }}
+          VERTEX_FLASH_MODEL: ${{ vars.VERTEX_FLASH_MODEL }}
+          VERTEX_ARGON_MODEL: ${{ vars.VERTEX_ARGON_MODEL }}
+          AI_PASSPHRASE: ${{ secrets.AI_PASSPHRASE }}
+          # しおりの移動時間（Routes API、車）。空なら直線距離の目安のまま（todo/humans/2026-11-07-shiori-routes-api.md）
+          ROUTES_API_KEY: ${{ secrets.ROUTES_API_KEY }}
+          # 建てる場所の実在と位置（Places API、テキスト検索）。空ならピンの位置は推測のまま（todo/humans/2026-11-08-places-verify-suggestions.md）
+          PLACES_API_KEY: ${{ secrets.PLACES_API_KEY }}
+          # 場所の情報の口コミ（Place Details、Enterprise + Atmosphere）。on にするのは人が決めてから（todo/humans/2026-11-08-places-reviews.md）
+          PLACES_REVIEWS: ${{ vars.PLACES_REVIEWS }}
+          # 場所の情報の写真 1 枚（Place Photo）。on にするのは、人が写真の 1 日の上限を 0 回から 30 回に上げてから（todo/humans/2026-11-07-places-photos-reviews.md）
+          PLACES_PHOTOS: ${{ vars.PLACES_PHOTOS }}
+          # 模型の見た目の参考（Knowledge Graph Search API）。空なら参考なしで作る（todo/humans/2026-11-08-model-kg-description.md）
+          KG_API_KEY: ${{ secrets.KG_API_KEY }}
+      # サービスアカウントキーを発行せず、Workload Identity 連携で認証する
+      - uses: google-github-actions/auth@v3
+        with:
+          workload_identity_provider: projects/1032832330557/locations/global/workloadIdentityPools/github/providers/konbu-devfest
+          service_account: github-deploy@konbu-devfest-hackathon-2026.iam.gserviceaccount.com
+      - run: npm run deploy
+      # 本番にも同じ確認を行う
+      - run: npm run smoke:prod

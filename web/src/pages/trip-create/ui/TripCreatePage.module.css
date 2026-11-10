@@ -1,0 +1,19 @@
+.top {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.hero {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.title {
+  /* 幅 320px で「う。」だけが次の行に落ちないよう、狭い幅では少し小さくする（320px で 23px、384px 以上で 28px） */
+  font-size: clamp(23px, 7.3vw, var(--font-size-xl));
+}
+
+.lead {
+  color: var(--color-text-sub);
+}

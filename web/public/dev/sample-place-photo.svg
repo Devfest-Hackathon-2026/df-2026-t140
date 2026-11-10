@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 300" role="img" aria-label="開発用の見本の写真">
+  <!-- 開発環境（Emulator）で、場所の写真の見た目を確かめるための見本。自分たちで描いた絵（Google マップの写真ではない） -->
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#8ec5ec"/>
+      <stop offset="1" stop-color="#d9eef8"/>
+    </linearGradient>
+  </defs>
+  <rect width="900" height="300" fill="url(#sky)"/>
+  <circle cx="760" cy="70" r="34" fill="#fff4c2"/>
+  <path d="M0 230 L170 90 L300 190 L430 70 L600 210 L720 120 L900 230 V300 H0 Z" fill="#7a9bb5"/>
+  <path d="M150 107 L170 90 L192 108 L176 104 L164 112 Z M410 87 L430 70 L452 89 L436 84 L424 93 Z" fill="#ffffff"/>
+  <path d="M0 250 Q220 205 450 245 T900 240 V300 H0 Z" fill="#6aa86b"/>
+  <rect x="300" y="128" width="300" height="44" rx="22" fill="#ffffff" opacity="0.85"/>
+  <text x="450" y="157" text-anchor="middle" font-family="sans-serif" font-size="22" font-weight="700" fill="#36505f">見本の写真（開発用）</text>
+</svg>

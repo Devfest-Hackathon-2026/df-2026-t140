@@ -1,0 +1,2 @@
+/* 押せる範囲は広く取り、絵の右端を画面の余白にそろえる */
+.speaker { display: inline-flex; flex: none; align-items: center; justify-content: center; width: var(--tap-size); height: var(--tap-size); margin-inline: auto calc((var(--tap-size) - 26px) / -2); padding: 0; border: 0; background: none; color: var(--color-text); cursor: pointer; }

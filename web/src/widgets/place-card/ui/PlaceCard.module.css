@@ -1,0 +1,240 @@
+/* 場所カード。画面の下から出るシート（低め。地図が主役） */
+.card {
+  display: grid;
+  gap: var(--space-3);
+  width: 100%;
+  max-height: 100%;
+  overflow-y: auto;
+  padding: var(--space-2) var(--space-4) calc(var(--space-3) + env(safe-area-inset-bottom));
+  border: var(--border-width) solid var(--color-border);
+  border-bottom: none;
+  border-radius: var(--radius-sheet) var(--radius-sheet) 0 0;
+  background: var(--color-surface);
+  box-shadow: var(--shadow-float);
+  min-height: 0;
+  /* 中のスクロールが端まで行っても、画面全体へ伝えない（iPhone で画面全体が動かないように） */
+  overscroll-behavior: contain;
+  /* 横の動きはスワイプ（前後の候補）に使い、縦のスクロールだけをブラウザに任せる */
+  touch-action: pan-y;
+  user-select: none;
+}
+
+/* スワイプで次の候補を選んだ：右から少し入る。前の候補なら左から */
+.fromRight {
+  animation: card-from-right 220ms ease-out;
+}
+
+.fromLeft {
+  animation: card-from-left 220ms ease-out;
+}
+
+@keyframes card-from-right {
+  from {
+    opacity: 0.4;
+    transform: translateX(32px);
+  }
+}
+
+@keyframes card-from-left {
+  from {
+    opacity: 0.4;
+    transform: translateX(-32px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fromRight,
+  .fromLeft {
+    animation: none;
+  }
+}
+
+/* 名前の行より下（説明、希望、状態、断り書き、操作）。取っ手で閉じると隠れる */
+/*
+ * 名前の行より下を包む枠。閉じると高さが 0 まで縮み、カードが下がる（開くと上がる）。
+ * 動きの長さと曲線は、しおりのシートの閉じる・開く動き（shared/ui/sheetMotion.module.css）に合わせる
+ */
+.fold {
+  display: grid;
+  grid-template-rows: 1fr;
+  transition:
+    grid-template-rows 340ms cubic-bezier(0.22, 1, 0.36, 1),
+    margin-top 340ms cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 200ms ease-out;
+}
+
+/* 閉じた：高さを 0 にし、名前の行との間（カードの gap）も詰める */
+.folded {
+  grid-template-rows: 0fr;
+  margin-top: calc(-1 * var(--space-3));
+  opacity: 0;
+  transition:
+    grid-template-rows 300ms cubic-bezier(0.4, 0, 0.2, 1),
+    margin-top 300ms cubic-bezier(0.4, 0, 0.2, 1),
+    opacity 160ms ease-in;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fold,
+  .folded {
+    transition: none;
+  }
+}
+
+/* 名前の行より下（説明、希望、状態、断り書き、操作） */
+.rest {
+  display: grid;
+  gap: var(--space-3);
+  min-height: 0;
+  overflow: hidden;
+}
+
+/*
+ * 上の部分（取っ手から名前の行まで）。上下にドラッグすると閉じる・開く。
+ * 縦の動きをブラウザのスクロールに取られないよう touch-action: none にする（左右の払いも、指の動きのまま useSwipe が受け取る）
+ */
+.top {
+  display: grid;
+  gap: var(--space-3);
+  touch-action: none;
+  cursor: grab;
+}
+
+/* 上の横棒（取っ手）。押すと閉じる・開く。見た目は小さいので、押せる範囲は横いっぱいにする */
+.grip {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  min-height: 24px;
+  margin: calc(-1 * var(--space-2)) 0 calc(-1 * var(--space-2));
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+}
+
+.handle {
+  justify-self: center;
+  width: 44px;
+  height: 5px;
+  border-radius: var(--radius-pill);
+  background: var(--color-edge);
+}
+
+.head {
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+}
+
+/* 写真の代わりの、場所の種類の絵 */
+.tile {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 76px;
+  height: 76px;
+  border-radius: var(--radius-l);
+  background: var(--color-go-soft);
+  color: var(--color-go-edge);
+  overflow: hidden;
+}
+
+.title {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.chips {
+  display: flex;
+  gap: var(--space-2);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-heading);
+}
+
+.category,
+.count {
+  padding: 1px 10px;
+  border-radius: var(--radius-s);
+}
+
+.category {
+  background: var(--color-build-soft);
+  color: var(--color-build-edge);
+}
+
+.count {
+  background: var(--color-surface-sunken);
+  color: var(--color-text-sub);
+}
+
+.name {
+  overflow-wrap: anywhere;
+  font-size: 22px;
+}
+
+.area {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  color: var(--color-text-sub);
+  font-size: var(--font-size-s);
+  font-weight: var(--font-weight-bold);
+}
+
+.description {
+  font-size: var(--font-size-s);
+  font-weight: var(--font-weight-bold);
+}
+
+.wish {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  color: var(--color-text-sub);
+  font-size: var(--font-size-s);
+  font-weight: var(--font-weight-bold);
+}
+
+.wishText {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* いまの状態（建築中、建った） */
+.state {
+  justify-self: start;
+  padding: 2px var(--space-3);
+  border-radius: var(--radius-pill);
+  background: var(--color-build-soft);
+  color: var(--color-build-edge);
+  font-size: var(--font-size-s);
+  font-weight: var(--font-weight-heading);
+}
+
+.note {
+  color: var(--color-text-sub);
+  font-size: 11px;
+}
+
+.actions {
+  display: flex;
+  gap: var(--space-3);
+  align-items: flex-start;
+}
+
+.actions > :last-child {
+  flex: 1;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}

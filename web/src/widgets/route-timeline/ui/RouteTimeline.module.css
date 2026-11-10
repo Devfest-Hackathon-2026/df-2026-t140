@@ -1,0 +1,144 @@
+/* しおりの行（S11）。丸い地点を太い線でつなぐ（A＋C：Duolingo の道） */
+.timeline {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.day {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.dayTitle {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  margin: var(--space-1) 0 0;
+  color: var(--color-route-edge);
+  font-size: var(--font-size-s);
+  font-weight: var(--font-weight-heading);
+}
+
+.date {
+  color: var(--color-text-sub);
+  font-size: var(--font-size-xs);
+}
+
+.stops {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.item {
+  position: relative;
+}
+
+/* 丸と丸をつなぐ線。最後の行には引かない */
+.item:not(:last-child)::before {
+  content: '';
+  position: absolute;
+  top: 40px;
+  bottom: -14px;
+  left: 25px;
+  width: 6px;
+  border-radius: 3px;
+  background: var(--color-border);
+}
+
+.stop {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  min-height: 64px;
+  padding: 6px var(--space-1) 6px 6px;
+  border: none;
+  border-radius: var(--radius-m);
+  background: none;
+  color: var(--color-text);
+  font: inherit;
+  text-align: left;
+}
+
+button.stop {
+  cursor: pointer;
+}
+
+button.stop:hover,
+.active {
+  background: var(--color-surface-sunken);
+}
+
+button.stop:focus-visible {
+  outline: 3px solid var(--color-route);
+  outline-offset: 0;
+}
+
+/* 地点の丸。希望した人の色に、場所の種類の絵。下に厚み（ぷっくり） */
+.dot {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  margin-bottom: 4px;
+  border: 3px solid var(--color-surface);
+  border-radius: 50%;
+  background: var(--dot-color);
+  color: var(--color-text-on-color);
+  box-shadow:
+    0 4px 0 color-mix(in srgb, var(--dot-color) 70%, #000),
+    0 0 0 1px var(--color-border);
+}
+
+.origin {
+  --dot-color: var(--color-text);
+}
+
+.time {
+  flex: none;
+  width: 3.2em;
+  color: var(--color-text-sub);
+  font-size: var(--font-size-s);
+  font-weight: var(--font-weight-heading);
+  font-variant-numeric: tabular-nums;
+}
+
+.text {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.name {
+  overflow: hidden;
+  font-size: 18px;
+  font-weight: var(--font-weight-heading);
+  line-height: 1.3;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sub {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-width: 0;
+  color: var(--color-text-sub);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+}
+
+.wish {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chevron {
+  flex: none;
+  color: var(--color-text-sub);
+}

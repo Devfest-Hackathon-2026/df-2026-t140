@@ -1,0 +1,121 @@
+/*
+ * 見た目の決まり（色、角丸、フォント、影）。部品はここの変数だけを使い、色などを直接書かない。
+ * 見た目の案を変えるときは、[data-theme='…'] のかたまりを足して、<html data-theme="…"> を切り替える
+ * （app/theme.ts。URL の ?theme= でも変えられる）。
+ *
+ * 色の意味は全画面で同じ。緑＝進む・探す、オレンジ＝建てる、青＝ルート。
+ *
+ * 既定は A＋C「ぷっくり × マップが主役」（このかたまりの下の [data-theme='ac']）。
+ * 案 A「ぷっくりポップ」：押せるものは 2px の縁と下に 4px の厚み。押すと沈む。
+ */
+:root,
+[data-theme='a'] {
+  /* 文字 */
+  --font-family:
+    'M PLUS Rounded 1c', 'Hiragino Maru Gothic ProN', 'Hiragino Sans', 'Noto Sans JP', system-ui, sans-serif;
+  --font-weight-body: 500;
+  --font-weight-bold: 700;
+  --font-weight-heading: 800;
+  --font-size-xs: 12px;
+  --font-size-s: 14px;
+  --font-size-m: 16px;
+  --font-size-l: 20px;
+  --font-size-xl: 28px;
+
+  /* 地の色と文字の色 */
+  --color-bg: #f3f6ee;
+  --color-surface: #ffffff;
+  --color-surface-sunken: #f7f7f5;
+  --color-text: #3c3c3c;
+  --color-text-sub: #6f7780;
+  --color-text-on-color: #ffffff;
+  --color-border: #e5e5e5;
+  --color-edge: #d4d4d4;
+  --color-overlay: rgb(40 44 52 / 45%);
+
+  /* 意味のある色（濃い色、下の厚みの色、薄い地の色） */
+  --color-go: #1f9638;
+  --color-go-edge: #16772b;
+  --color-go-soft: #e2f3e5;
+  --color-build: #e2620d;
+  --color-build-edge: #b34a06;
+  --color-build-soft: #fdebdc;
+  --color-route: #1676d1;
+  --color-route-edge: #0f5aa3;
+  --color-route-soft: #e1eefb;
+  --color-danger: #c4281c;
+  --color-toast: #3c3c3c;
+
+  /* 地図が入る場所の仮の色（地図そのものの色はマップ ID で決まる） */
+  --color-map-land: #eef4e3;
+  --color-map-park: #c3e3a8;
+  --color-map-water: #a5d6f2;
+  --color-map-road: #ffffff;
+  --color-map-line: #dfe8d2;
+
+  /* 形 */
+  --radius-s: 12px;
+  --radius-m: 16px;
+  --radius-l: 22px;
+  --radius-sheet: 28px;
+  --radius-pill: 999px;
+  --border-width: 2px;
+  /* 押せるものの下の厚み。0 にすると平らな見た目になる */
+  --edge-depth: 4px;
+  --shadow-float: 0 6px 18px rgb(60 60 60 / 12%);
+
+  /* 間隔 */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+
+  /* 押せるものの最小の高さ（親指で押しやすい大きさ） */
+  --tap-size: 52px;
+}
+
+/*
+ * A＋C「ぷっくり × マップが主役」（採用。docs/ui/screen-flow/design-options/README.md）。
+ * 地図は落ち着いた色で、3D の建物だけが鮮やか。押せるものは A と同じ「ぷっくり」。
+ * A との違い：地の色を緑がかった色から落ち着いた灰色に、縁を少し青みのある灰色に、角を大きく丸くする。
+ * （:root には書かない。?theme=a で案 A に戻せるようにするため）
+ */
+[data-theme='ac'] {
+  --color-bg: #f1f3f5;
+  --color-surface: #ffffff;
+  --color-surface-sunken: #f1f3f5;
+  --color-text: #2a2e33;
+  --color-text-sub: #68707a;
+  --color-border: #e1e5ea;
+  --color-edge: #d3d8de;
+  --color-overlay: rgb(36 40 48 / 40%);
+
+  --color-go: #1a9337;
+  --color-go-edge: #12732a;
+  --color-go-soft: #e3f1e6;
+  --color-build: #e2620d;
+  --color-build-edge: #b04a05;
+  --color-build-soft: #fde8d8;
+  --color-route: #1673d1;
+  --color-route-edge: #0e58a3;
+  --color-route-soft: #e3eefb;
+  --color-toast: #2a2e33;
+
+  /*
+   * 地図なしの表示の色。本物の地図の色は、マップ ID に関連付けたスタイルで決まる。
+   * どちらも案 4「おもちゃの街・道路なし」（docs/ui/map-style.json）にそろえる：クリーム色の陸地、はっきりした緑と青
+   */
+  --color-map-land: #fff4d6;
+  --color-map-park: #9fdc8a;
+  --color-map-water: #7cc8f0;
+  --color-map-road: #ffffff;
+  --color-map-line: #f0e1b8;
+
+  --radius-s: 14px;
+  --radius-m: 18px;
+  --radius-l: 22px;
+  --radius-sheet: 30px;
+  --shadow-float: 0 6px 20px rgb(42 46 51 / 12%);
+}

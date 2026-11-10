@@ -1,0 +1,67 @@
+/* 地図なしの表示。落ち着いた地の色に、目盛りの線だけ */
+.surface {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background: var(--color-map-land);
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+
+.surface:active {
+  cursor: grabbing;
+}
+
+.grid {
+  position: absolute;
+  inset: 0;
+  stroke: var(--color-map-line);
+  stroke-width: 1.5;
+}
+
+/* 位置を指す、大きさ 0 の点。中身はこの点を基準に描く */
+.anchor,
+.region {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 0;
+  height: 0;
+}
+
+.region > span {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  width: max-content;
+  color: var(--color-edge);
+  font-size: var(--font-size-s);
+  font-weight: var(--font-weight-heading);
+  letter-spacing: 0.08em;
+  pointer-events: none;
+}
+
+/* ルートの線。印より奥、目盛りの線より手前 */
+.lines {
+  position: absolute;
+  inset: 0;
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  pointer-events: none;
+}
+
+.lineEdge {
+  stroke: var(--color-surface);
+  stroke-width: 10;
+}
+
+.line {
+  stroke: var(--color-route);
+  stroke-width: 6;
+}
+
+/* まだ決まっていない案は点線 */
+.dashed {
+  stroke-dasharray: 1 13;
+}

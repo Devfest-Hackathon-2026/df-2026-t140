@@ -1,0 +1,52 @@
+.region {
+  position: fixed;
+  z-index: 50;
+  /* 旅の画面の上の帯（旅の名前、できごと、見ているあたり）の下に出す */
+  top: calc(164px + env(safe-area-inset-top));
+  left: 0;
+  right: 0;
+  display: grid;
+  justify-items: center;
+  gap: var(--space-2);
+  padding: 0 var(--space-4);
+  pointer-events: none;
+}
+
+.toast {
+  max-width: 100%;
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-pill);
+  background: var(--color-toast);
+  color: var(--color-text-on-color);
+  box-shadow: var(--shadow-float);
+  font-size: var(--font-size-s);
+  font-weight: var(--font-weight-bold);
+  /* 開くときは、少し下から弾むように上がってくる */
+  animation: enter 260ms cubic-bezier(0.34, 1.4, 0.64, 1);
+}
+
+/* 閉じるときは、下へ下がりながら薄くなる。長さは Toast.tsx の LEAVE_MS と合わせる */
+.leaving {
+  animation: leave 220ms ease-in forwards;
+}
+
+@keyframes enter {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.92);
+  }
+}
+
+@keyframes leave {
+  to {
+    opacity: 0;
+    transform: translateY(12px) scale(0.96);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .toast,
+  .leaving {
+    animation: none;
+  }
+}

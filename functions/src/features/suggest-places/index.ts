@@ -1,0 +1,1 @@
+export { suggestPlaces } from './handler'

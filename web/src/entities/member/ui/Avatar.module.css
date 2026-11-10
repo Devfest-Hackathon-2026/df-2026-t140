@@ -1,0 +1,26 @@
+.avatar {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: var(--avatar-size);
+  height: var(--avatar-size);
+  border: var(--border-width) solid var(--color-surface);
+  border-radius: 50%;
+  background: var(--avatar-color);
+  color: var(--color-text-on-color);
+  font-size: calc(var(--avatar-size) * 0.42);
+  font-weight: var(--font-weight-heading);
+  line-height: 1;
+}
+
+.stack {
+  display: inline-flex;
+}
+
+.stack > * + * {
+  margin-left: -10px;
+}
+
+.more {
+  --avatar-color: var(--color-text-sub);
+}

@@ -1,0 +1,57 @@
+/* 地図が入る場所。親（旅の画面）いっぱいに広がる */
+.map {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background: var(--color-map-land);
+  /* 地図の印の重なり順（z-index）を、この中だけに閉じる。上の帯と下のシートは、いつも印より手前 */
+  isolation: isolate;
+}
+
+/* 拡大・縮小。右の、下の操作欄のすぐ上 */
+.zoom {
+  position: absolute;
+  right: var(--space-3);
+  bottom: calc(var(--map-bottom-inset, 0px) + var(--space-5));
+  /* 地図の印（z-index は 1000 まで）より手前 */
+  z-index: 2000;
+  display: grid;
+  gap: var(--space-2);
+  transition: bottom 160ms ease-out;
+}
+
+/* 地図なしの表示のときの断り書き。本物の地図で Google のロゴが出る場所（下の操作欄のすぐ上の左） */
+.note {
+  position: absolute;
+  left: var(--space-3);
+  bottom: calc(var(--map-bottom-inset, 0px) + var(--space-1));
+  max-width: 60%;
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-s);
+  background: rgb(255 255 255 / 80%);
+  color: var(--color-text-sub);
+  font-size: 11px;
+  font-weight: var(--font-weight-bold);
+  line-height: 1.4;
+  pointer-events: none;
+  z-index: 2000;
+  transition: bottom 160ms ease-out;
+}
+
+/* 本番で地図を読み込めなかったとき。地図なしの表示には切り替えず、文だけ出す */
+.unavailable {
+  position: absolute;
+  left: var(--space-4);
+  right: var(--space-4);
+  top: 45%;
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-m);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: var(--font-size-s);
+  font-weight: var(--font-weight-bold);
+  line-height: 1.6;
+  text-align: center;
+  box-shadow: var(--shadow-float);
+}

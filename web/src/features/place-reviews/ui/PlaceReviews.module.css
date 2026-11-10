@@ -1,0 +1,68 @@
+/* Google マップの口コミ。場所の情報（S12）の中に、断り書きと同じ控えめな見た目で並べる */
+.reviews {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.heading {
+  margin: 0;
+  font-size: var(--font-size-s);
+  font-weight: var(--font-weight-heading);
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.item {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.author {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--font-size-xs);
+}
+
+.avatar {
+  border-radius: 50%;
+}
+
+.rating {
+  color: var(--color-text);
+}
+
+.time {
+  color: var(--color-text-sub);
+}
+
+.text {
+  display: -webkit-box;
+  margin: 0;
+  overflow: hidden;
+  font-size: var(--font-size-s);
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+}
+
+.links {
+  display: flex;
+  gap: var(--space-3);
+  font-size: var(--font-size-xs);
+}
+
+.note {
+  margin: 0;
+  color: var(--color-text-sub);
+  font-size: var(--font-size-xs);
+}

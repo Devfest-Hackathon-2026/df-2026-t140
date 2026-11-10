@@ -1,0 +1,50 @@
+/* 本物の地図の置き場所。親（旅の画面）いっぱいに広がる */
+.host {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background: var(--color-map-land);
+}
+
+.canvas {
+  width: 100%;
+  height: 100%;
+}
+
+/*
+ * Google のロゴを、下の操作欄の高さだけ上にずらす（隠さない）。ロゴは「Google マップを開くリンク」。
+ * ずらせたかどうかは GoogleSurface.tsx の checkLogo で確かめ、だめなら下の .shrunk に切り替える。
+ */
+.host :global(.gm-style a[href^='https://maps.google.com/maps']) {
+  display: inline-block !important;
+  transform: translateY(calc(-1 * var(--map-bottom-inset, 0px)));
+  transition: transform 160ms ease-out;
+}
+
+/*
+ * 著作権表示（「地図データ ©2026 Google」、利用規約など。.gm-style-cc が並ぶ右下の枠）は、
+ * 画面のいちばん上（旅のタイトルの帯の上）の右に固定する。下のシートや、上のお知らせの行の高さが変わっても動かない。
+ * 上の帯（widgets/trip-header）の上の余白（12px）と、旅の画面の .top の padding-top（4px）の中に収まる（高さ 14px）。
+ * 隠さず、ほかの部品とも重ならない場所に出す（Maps Platform の規約）
+ */
+.host :global(.gm-style div[style*='inline-flex']:has(> .gm-style-cc)) {
+  /* iPhone の切り欠きの下（上の帯と同じく safe-area の分だけ下げる） */
+  top: env(safe-area-inset-top, 0px) !important;
+  bottom: auto !important;
+}
+
+/* ずらせなかったとき：地図そのものを、下の操作欄の上までに縮める（ロゴは地図の下の端に出る） */
+.shrunk {
+  bottom: var(--map-bottom-inset, 0px);
+}
+
+.shrunk :global(.gm-style a[href^='https://maps.google.com/maps']) {
+  transform: none;
+}
+
+/* 位置を指す、大きさ 0 の点。中身はこの点を基準に描く */
+.anchor {
+  position: relative;
+  width: 0;
+  height: 0;
+}

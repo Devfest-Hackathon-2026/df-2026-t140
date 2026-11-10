@@ -1,0 +1,26 @@
+/* 場所の情報（S12）の、Google マップの写真 1 枚。PlacePhoto.tsx */
+.photo {
+  display: grid;
+  gap: var(--space-1);
+  margin: 0;
+}
+
+/* 横長（3:1）に切りそろえ、シートを高くしすぎない（16:9 では大きすぎた、#215） */
+.image {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  aspect-ratio: 3 / 1;
+  object-fit: cover;
+  border-radius: var(--radius-l);
+  background: var(--color-surface-sunken);
+}
+
+.caption {
+  color: var(--color-text-sub);
+  font-size: var(--font-size-xs);
+}
+
+.caption a {
+  color: inherit;
+}

@@ -1,0 +1,1 @@
+export { verifyPlace } from './handler'

@@ -1,0 +1,18 @@
+.top {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.hero {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.title {
+  font-size: var(--font-size-xl);
+}
+
+.lead {
+  color: var(--color-text-sub);
+}

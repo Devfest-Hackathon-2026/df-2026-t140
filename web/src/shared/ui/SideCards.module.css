@@ -1,0 +1,186 @@
+/* 場所カード（S05）と場所の情報（S12）の、左右にのぞく、となりのカード。SideCards.tsx */
+
+/* カードと、その上に出す合図の一言をまとめる枠（一言をカードのスクロールの外に置くため） */
+.wrap {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-height: 0;
+  --peek-width: 24px;
+}
+
+/* 真ん中のカード。のぞくカードより手前に重ねる */
+.body {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-height: 0;
+}
+
+/* 前・次の場所があるとき：カードを左右に少し細くし、空いたところに、となりのカードの端をのぞかせる */
+.withSides {
+  padding-inline: var(--peek-width);
+}
+
+/* となりのカードの端。カードの下に重なり、端の --peek-width だけが見える。押すとその場所へ移る */
+.side {
+  position: absolute;
+  top: var(--space-4);
+  bottom: 0;
+  z-index: 0;
+  display: flex;
+  align-items: flex-start;
+  width: calc(var(--peek-width) + 16px);
+  padding: 44px 0 0;
+  border: var(--border-width) solid var(--color-border);
+  border-bottom: none;
+  background: var(--color-surface-sunken);
+  color: var(--color-text-sub);
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: opacity 150ms ease-out;
+}
+
+.sidePrev {
+  left: 0;
+  justify-content: flex-start;
+  padding-left: 4px;
+  border-radius: var(--radius-sheet) 0 0 0;
+}
+
+.sideNext {
+  right: 0;
+  justify-content: flex-end;
+  padding-right: 4px;
+  border-radius: 0 var(--radius-sheet) 0 0;
+}
+
+.side:active {
+  background: var(--color-edge);
+}
+
+.side:focus-visible {
+  z-index: 2;
+}
+
+/* シートを指で動かしている間や閉じる途中は、のぞくカードを隠す（カードだけが動くので、置いていかれないように） */
+.sidesHidden .side {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/*
+ * しおりから場所の情報を開いたとき：シートが上がってきたあと、カードが左右に少し細くなり、
+ * となりのカードがカードの後ろから左右へ出てくる
+ */
+.appear {
+  animation: sides-room 320ms cubic-bezier(0.22, 1, 0.36, 1) 280ms backwards;
+}
+
+.appear .sidePrev {
+  animation: side-from-right 360ms cubic-bezier(0.22, 1, 0.36, 1) 300ms backwards;
+}
+
+.appear .sideNext {
+  animation: side-from-left 360ms cubic-bezier(0.22, 1, 0.36, 1) 300ms backwards;
+}
+
+@keyframes sides-room {
+  from {
+    padding-inline: 0;
+  }
+}
+
+@keyframes side-from-right {
+  from {
+    opacity: 0;
+    transform: translateX(var(--peek-width));
+  }
+}
+
+@keyframes side-from-left {
+  from {
+    opacity: 0;
+    transform: translateX(calc(-1 * var(--peek-width)));
+  }
+}
+
+/* はじめての時だけ、カードの上に出す一言。少しして消える（長さは shared/lib/swipeHint.ts の HINT_MS と合わせる） */
+.hint {
+  position: absolute;
+  bottom: calc(100% + var(--space-2));
+  left: 50%;
+  z-index: 2;
+  margin: 0;
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-pill);
+  background: var(--color-toast);
+  color: var(--color-text-on-color);
+  box-shadow: var(--shadow-float);
+  font-size: var(--font-size-s);
+  font-weight: var(--font-weight-bold);
+  white-space: nowrap;
+  transform: translateX(-50%);
+  pointer-events: none;
+  animation: hint 4200ms ease-in-out forwards;
+}
+
+@keyframes hint {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, 6px);
+  }
+  10%,
+  85% {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, 0);
+  }
+}
+
+/* はじめての時だけ、カードが左へ少し動いて戻る（となりにも場所があると分かるように） */
+.nudge {
+  animation: nudge 1200ms ease-in-out 450ms;
+}
+
+@keyframes nudge {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  30% {
+    transform: translateX(-36px);
+  }
+  55% {
+    transform: translateX(0);
+  }
+  75% {
+    transform: translateX(-14px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .appear,
+  .appear .sidePrev,
+  .appear .sideNext,
+  .nudge {
+    animation: none;
+  }
+
+  /* 動きを減らす設定では、一言は動かさずに出して、少しして消す */
+  .hint {
+    animation: hint-fade 4200ms steps(1, end) forwards;
+  }
+}
+
+@keyframes hint-fade {
+  to {
+    opacity: 0;
+  }
+}

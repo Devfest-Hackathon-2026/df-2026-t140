@@ -1,0 +1,30 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup",
+        "hooks": [
+          {
+            "name": "harness-context",
+            "type": "command",
+            "command": "node \"$GEMINI_PROJECT_DIR/scripts/harness/hook.mjs\" gemini session-start",
+            "timeout": 30000
+          }
+        ]
+      }
+    ],
+    "BeforeTool": [
+      {
+        "matcher": "run_shell_command|write_file|replace",
+        "hooks": [
+          {
+            "name": "harness-guard",
+            "type": "command",
+            "command": "node \"$GEMINI_PROJECT_DIR/scripts/harness/hook.mjs\" gemini pre-tool",
+            "timeout": 20000
+          }
+        ]
+      }
+    ]
+  }
+}

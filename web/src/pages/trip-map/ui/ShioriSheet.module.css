@@ -1,0 +1,149 @@
+/* しおり（S11）の下のシート */
+.sheet {
+  align-self: flex-end;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  width: 100%;
+  /* 地図（建物と道順）が見えるよう、画面の半分ほどまで。行が多ければ、行のところだけ動かして見る */
+  max-height: min(100%, 52dvh);
+  /* 外側の左上に再生ボタンを浮かべるので、はみ出しを切らない（行が多いときは、行の欄だけを動かして見る） */
+  position: relative;
+  padding: var(--space-2) var(--space-4) calc(var(--space-4) + env(safe-area-inset-bottom));
+  border: var(--border-width) solid var(--color-border);
+  border-bottom: none;
+  border-radius: var(--radius-sheet) var(--radius-sheet) 0 0;
+  background: var(--color-surface);
+  box-shadow: var(--shadow-float);
+  /* 出るとき・閉じるとき・閉じた状態から開くときの動きは、shared/ui の sheetMotion のクラスで付ける */
+}
+
+/* 地図に触れて、日程の行だけが残った状態 */
+.peek {
+  gap: var(--space-2);
+}
+
+.handle {
+  flex: none;
+  align-self: center;
+  width: 44px;
+  height: 5px;
+  border-radius: var(--radius-pill);
+  background: var(--color-edge);
+}
+
+.chips {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.members {
+  flex: 1;
+  display: flex;
+}
+
+/* Google マップで道順を開く。白いぷっくりの小さなボタン */
+.maps {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-height: 44px;
+  padding: 0 var(--space-3);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-m);
+  background: var(--color-surface);
+  box-shadow: 0 3px 0 var(--color-edge);
+  color: var(--color-text);
+  font-size: var(--font-size-s);
+  font-weight: var(--font-weight-heading);
+  text-decoration: none;
+}
+
+.maps:active {
+  transform: translateY(3px);
+  box-shadow: none;
+}
+
+/* 旅を映像で見る再生ボタン。シートの外側の左上に浮かべる（シートといっしょに動く）。ルートの色のぷっくりの丸 */
+.play {
+  position: absolute;
+  bottom: calc(100% + var(--space-3));
+  left: var(--space-4);
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  padding: 0;
+  border: var(--border-width) solid var(--color-route-edge);
+  border-radius: 50%;
+  background: var(--color-route);
+  box-shadow:
+    0 4px 0 var(--color-route-edge),
+    var(--shadow-float);
+  color: var(--color-text-on-color);
+  cursor: pointer;
+}
+
+.play:active {
+  transform: translateY(4px);
+  box-shadow: none;
+}
+
+.play:focus-visible {
+  outline: 3px solid var(--color-route);
+  outline-offset: 3px;
+}
+
+.timeline {
+  flex: 1 1 auto;
+  min-height: 0;
+  margin: 0 calc(-1 * var(--space-2));
+  padding: 0 var(--space-2);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.empty {
+  flex: none;
+  margin: 0;
+  padding: var(--space-3) 0 var(--space-4);
+  color: var(--color-text-sub);
+  font-size: var(--font-size-s);
+  font-weight: var(--font-weight-bold);
+  line-height: 1.5;
+}
+
+/* 閉じた状態の、日程の行（押すとしおりが元の高さに戻る） */
+.expand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  min-height: 44px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--color-text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.up {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  color: var(--color-text-sub);
+}
+
+/* 横向きなど高さの低い画面。半分では日程の行だけで終わるので、場所の行が見える高さまで広げる */
+@media (max-height: 500px) {
+  .sheet {
+    max-height: 100%;
+  }
+}

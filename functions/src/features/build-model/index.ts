@@ -1,0 +1,1 @@
+export { buildModel } from './handler'

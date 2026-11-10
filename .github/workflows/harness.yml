@@ -1,0 +1,32 @@
+name: Harness
+
+# AI 駆動開発のハーネスのチェック（docs/process/README.md）。どの PR でも走る。
+# 依存を入れずに動く（ハーネスは Node の標準機能だけで書いてある）ので、数十秒で終わる。
+on:
+  pull_request:
+  # todo/humans/ は PR を通さず main に直接入る（docs/process/work.md）。その形をここで確かめる
+  push:
+    branches: [main]
+    paths:
+      - 'todo/humans/**'
+
+permissions:
+  contents: read
+
+jobs:
+  harness:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # main との差（宣言した範囲、秘密情報）を見るため、履歴をすべて取る
+          fetch-depth: 0
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .tool-versions
+      - run: git config --global user.name "harness-ci" && git config --global user.email "harness-ci@example.invalid"
+      # ガードとチェックの評価用の入力セット（正常系と異常系）と、git hooks を一時リポジトリで動かすテスト
+      - run: npm run test:harness
+      # 機械で見る評価軸（層、作業宣言、ブランチ名、範囲、秘密情報、他社 AI の SDK、文書のリンク、人の判断）
+      - run: node scripts/harness/check.mjs --base "${{ github.event_name == 'push' && github.event.before || format('origin/{0}', github.base_ref) }}"

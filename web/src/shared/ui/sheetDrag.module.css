@@ -1,0 +1,20 @@
+/*
+ * 下のシートを取っ手でドラッグして開け閉めする（ヨウキンが 2026-11-07 に決めた）。
+ * 取っ手は見た目が小さい（幅 44px、高さ 5px）ので、指で触れる範囲を見えない形で広げる
+ */
+.grip {
+  position: relative;
+  touch-action: none;
+  cursor: grab;
+}
+
+.grip::before {
+  content: '';
+  position: absolute;
+  inset: -14px -64px;
+}
+
+/* 閉じた形のシート：どこをつかんでも上へドラッグできる */
+.peekGrip {
+  touch-action: none;
+}

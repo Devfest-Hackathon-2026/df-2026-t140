@@ -1,0 +1,55 @@
+name: CI
+
+on:
+  pull_request:
+    # 文書とハーネスの設定だけの変更では、重い確認（Emulator）を走らせない。ハーネスのチェックは harness.yml が行う
+    paths-ignore:
+      - 'docs/**'
+      - 'todo/**'
+      - 'transcripts/**'
+      - '**/*.md'
+      - '.claude/**'
+      - '.agents/**'
+      - '.codex/**'
+      - '.gemini/**'
+      - '.githooks/**'
+      - 'evals/**'
+      - 'harness.config.json'
+  # main への merge のあとにも同じ確認を行う。main への merge では本番に出ないので、出す前の確認はここと deploy.yml の verify が担う
+  push:
+    branches: [main]
+    paths-ignore:
+      - 'docs/**'
+      - 'todo/**'
+      - 'transcripts/**'
+      - '**/*.md'
+      - '.claude/**'
+      - '.agents/**'
+      - '.codex/**'
+      - '.gemini/**'
+      - '.githooks/**'
+      - 'evals/**'
+      - 'harness.config.json'
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    env:
+      # ブラウザ用の Maps キー。リファラと API を制限してある。リポジトリには置かない
+      VITE_GOOGLE_MAPS_API_KEY: ${{ secrets.GOOGLE_MAPS_API_KEY }}
+      VITE_GOOGLE_MAPS_MAP_ID: ${{ vars.GOOGLE_MAPS_MAP_ID }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .tool-versions
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '21'
+      - run: npm run setup
+      # ローカルと同じコマンドで、Emulator 上の確認まで行う
+      - run: npm run verify

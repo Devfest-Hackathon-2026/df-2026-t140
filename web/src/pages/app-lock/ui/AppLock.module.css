@@ -1,0 +1,32 @@
+.brand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--tap-size);
+  color: var(--color-go);
+}
+
+.brandName {
+  flex: none;
+  color: var(--color-text);
+  font-size: 22px;
+}
+
+.body {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-4) 0;
+}
+
+.title {
+  font-size: clamp(23px, 7.3vw, var(--font-size-xl));
+}
+
+.lead {
+  color: var(--color-text-sub);
+}
+
+.note {
+  color: var(--color-text-sub);
+  font-size: var(--font-size-xs);
+}

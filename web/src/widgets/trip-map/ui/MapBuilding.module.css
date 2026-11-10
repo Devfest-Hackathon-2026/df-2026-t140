@@ -1,0 +1,220 @@
+/* 地図の上の建物と、工事中の場所。親は、その場所を指す大きさ 0 の点 */
+
+/* 押せる範囲（建物の上にかぶせる、見えないボタン）。絵にして置くときは、この中に絵が入る */
+.building {
+  position: absolute;
+  left: 0;
+  top: 0;
+  transform: translate(-50%, -62%);
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+/* 絵の基準の点（模型の原点）。ボタンの中で、その場所に合わせる */
+.sprite {
+  position: absolute;
+  left: 50%;
+  top: 62%;
+  width: 0;
+  height: 0;
+  animation: pop 600ms cubic-bezier(0.3, 1.5, 0.5, 1);
+}
+
+@keyframes pop {
+  from {
+    transform: scale(0.2);
+    opacity: 0;
+  }
+}
+
+/* 名札。地図のピンの名札（MapPin.module.css）と同じ形。建物の名札の上の端は、模型の大きさに合わせて MapBuilding.tsx が決める */
+.label {
+  position: absolute;
+  top: 26px;
+  left: 0;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  width: max-content;
+  max-width: 190px;
+  padding: 2px 10px;
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-family: var(--font-family);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-heading);
+  line-height: 1.5;
+  pointer-events: none;
+}
+
+.name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.labelSelected {
+  border-color: var(--color-text);
+  background: var(--color-text);
+  color: var(--color-text-on-color);
+  font-size: var(--font-size-s);
+}
+
+/* 工事中：オレンジ（建てる）の点線の輪と、はずむ金づち */
+.labelBuilding {
+  border-color: var(--color-build);
+}
+
+.state {
+  flex: none;
+  padding: 0 6px;
+  border-radius: var(--radius-pill);
+  background: var(--color-build-soft);
+  color: var(--color-build-edge);
+  font-size: 11px;
+}
+
+.site {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 0;
+  height: 0;
+}
+
+.siteRing {
+  position: absolute;
+  left: -34px;
+  top: -17px;
+  width: 68px;
+  height: 34px;
+  border: 3px dashed var(--color-build);
+  border-radius: 50%;
+  background: rgb(226 98 13 / 14%);
+  animation: pulse 1.2s ease-in-out infinite;
+}
+
+.siteIcon {
+  position: absolute;
+  left: -20px;
+  top: -44px;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border: var(--border-width) solid var(--color-build-edge);
+  border-radius: var(--radius-s);
+  background: var(--color-build);
+  color: var(--color-text-on-color);
+  box-shadow: 0 3px 0 var(--color-build-edge);
+  animation: hammer 0.9s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  50% {
+    transform: scale(1.12);
+    opacity: 0.6;
+  }
+}
+
+@keyframes hammer {
+  50% {
+    transform: translateY(-6px) rotate(-14deg);
+  }
+}
+
+/* 選んでいる建物（場所カード、しおりの場所の情報 S12・S13）：建物の絵の縁にオレンジの線を引く */
+.spriteSelected {
+  filter: drop-shadow(3px 0 0 var(--color-build)) drop-shadow(-3px 0 0 var(--color-build))
+    drop-shadow(0 3px 0 var(--color-build)) drop-shadow(0 -3px 0 var(--color-build));
+}
+
+/* いま建ったばかりの建物（S07）：選んでいる建物と同じ太さで、青（ルート＝しおり）の線を引く */
+.spriteCelebrating {
+  filter: drop-shadow(3px 0 0 var(--color-route)) drop-shadow(-3px 0 0 var(--color-route))
+    drop-shadow(0 3px 0 var(--color-route)) drop-shadow(0 -3px 0 var(--color-route));
+}
+
+/*
+ * 「建築完了」の印。押せないので、押せるもの（色の塗り、縁、下の厚み）の形にしない（#225）。
+ * 白地に緑の文字と、緑の丸のチェック。色だけに頼らず、文字とチェックで完了を伝える
+ */
+.done {
+  position: absolute;
+  left: 18px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: max-content;
+  padding: 2px 8px 2px 3px;
+  border-radius: 8px;
+  background: var(--color-surface);
+  color: var(--color-go-edge);
+  font-family: var(--font-family);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-heading);
+  line-height: 1.5;
+  pointer-events: none;
+  user-select: none;
+}
+
+.doneMark {
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--color-go);
+  color: var(--color-text-on-color);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sprite,
+  .siteRing,
+  .siteIcon,
+  .count {
+    animation: none;
+  }
+}
+
+/* ルートで回る順番の番号（青＝ルート） */
+.order {
+  flex: none;
+  display: grid;
+  place-items: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  border-radius: var(--radius-pill);
+  background: var(--color-route);
+  color: var(--color-text-on-color);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-heading);
+  line-height: 1;
+}
+
+/* まとめた数（近くの建物を、この建物が代表しているとき）。模型の右上に出す。位置は lib/declutter.ts の badgeOffset */
+.count {
+  position: absolute;
+  display: grid;
+  place-items: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  border: var(--border-width) solid var(--color-surface);
+  border-radius: var(--radius-pill);
+  background: var(--color-text);
+  color: var(--color-text-on-color);
+  font-family: var(--font-family);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-heading);
+  line-height: 1;
+  pointer-events: none;
+  animation: pop 300ms cubic-bezier(0.3, 1.5, 0.5, 1);
+}
