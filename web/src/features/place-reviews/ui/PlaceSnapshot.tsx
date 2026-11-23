@@ -1,3 +1,4 @@
+import { translate } from '@/shared/lib'
 import { type ReactNode, useState } from 'react'
 import { usePlaceReviews } from '../model/usePlaceReviews'
 import styles from './PlaceSnapshot.module.css'
@@ -35,7 +36,7 @@ export function PlaceSnapshot({ tripId, pinId, ask, name, caption, shown }: Prop
     <figure className={styles.snapshot}>
       {photo && (
         <div className={styles.frame}>
-          <img className={styles.image} src={photo.uri} alt={`${name}の写真`} referrerPolicy="no-referrer" onError={() => setFailed(photo.uri)} />
+          <img className={styles.image} src={photo.uri} alt={translate(`${name}の写真`, `Photo of ${name}`)} referrerPolicy="no-referrer" onError={() => setFailed(photo.uri)} />
           <span className={styles.flash} aria-hidden="true" />
         </div>
       )}
@@ -44,11 +45,11 @@ export function PlaceSnapshot({ tripId, pinId, ask, name, caption, shown }: Prop
         {photo &&
           (sample ? (
             // 開発環境の見本（自分たちで描いた絵）。Google マップの出典は付けない
-            <span className={styles.credit}>見本の写真（開発用。Google マップの写真ではありません）</span>
+            <span className={styles.credit}>{translate('見本の写真（開発用。Google マップの写真ではありません）', "Sample photo for development.")}</span>
           ) : (
             // 出典はいつも出す。撮った人がわかれば、その名前（Google マップのプロフィールへのリンク）も出す
             <span className={styles.credit}>
-              写真：
+              {translate('写真：', 'Photo: ')}
               {photo.authors.map((author, index) => (
                 <span key={`${author.name}-${index}`}>
                   {index > 0 && '、'}
@@ -62,7 +63,7 @@ export function PlaceSnapshot({ tripId, pinId, ask, name, caption, shown }: Prop
                 </span>
               ))}
               {photo.authors.length > 0 ? '（' : ''}
-              <span translate="no">Google マップ</span>
+              <span translate="no">{translate('Google マップ', "Google Maps")}</span>
               {photo.authors.length > 0 ? '）' : ''}
             </span>
           ))}

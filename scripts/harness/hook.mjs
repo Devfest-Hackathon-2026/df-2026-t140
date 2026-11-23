@@ -7,7 +7,8 @@ import { dirname, isAbsolute, join, relative, resolve } from 'node:path'
 import { existsSync, realpathSync } from 'node:fs'
 import { checkArchitecture, isCodeFile } from './lib/arch.mjs'
 import { readAutonomy } from './lib/autonomy.mjs'
-import { checkCommand, MESSAGES, REVIEW_MARKER } from './lib/command-guard.mjs'
+import { checkCommand, latestChecks, MESSAGES, REVIEW_MARKER } from './lib/command-guard.mjs'
+import { jobNotStarted, VERIFY_MARKER } from './lib/verify-local.mjs'
 import { isProtectedBranch, ledgerPathFor } from './lib/conventions.mjs'
 import { checkEdit, isSecretFile } from './lib/edit-guard.mjs'
 import { applyPaneTitle } from './lib/pane-title.mjs'
@@ -117,24 +118,42 @@ const print = (value) => process.stdout.write(`${JSON.stringify(value)}\n`)
 // merge してよいかを決めるための PR の情報（gh。取れなければ undefined → 止める）
 function prInfoLookup(projectDir) {
   return (target) => {
-    const fields = 'files,baseRefName,isDraft,mergeable,statusCheckRollup,reviewDecision,comments,headRefOid'
+    const fields = 'files,baseRefName,isDraft,labels,mergeable,statusCheckRollup,reviewDecision,comments,headRefOid'
     const result = gh(['pr', 'view', ...(target ? [target] : []), '--json', fields], { cwd: projectDir })
     if (!result.ok) return undefined
     const data = JSON.parse(result.stdout)
-    const checks = (data.statusCheckRollup ?? []).map((check) => ({
-      name: check.name ?? check.context ?? '?',
-      state: check.conclusion || (check.status && check.status !== 'COMPLETED' ? 'PENDING' : check.state) || 'PENDING',
-    }))
+    // 落ちたチェックは、GitHub の注記を読んで、ジョブが始まらなかった（支払い・利用上限）のかを確かめる。
+    // 読めなければ、ふつうの失敗として扱う（止める側に倒す）
+    // 注記を引くのは、落ちたチェックの先頭の 2 つまで（gh は 1 回 6 秒で打ち切る。フックの timeout 20 秒に収めるため。
+    // docs/process/ops-checklist.md）。3 つ目からは引かず、ふつうの失敗として扱う
+    let asked = 0
+    const checks = latestChecks(data.statusCheckRollup).map(({ url, ...check }) => {
+      const job = check.state === 'FAILURE' ? url?.match(/\/job\/(\d+)/)?.[1] : undefined
+      if (!job || asked >= 2) return check
+      asked += 1
+      const notes = gh(['api', `repos/{owner}/{repo}/check-runs/${job}/annotations`], { cwd: projectDir })
+      let notStarted = false
+      try {
+        notStarted = notes.ok && jobNotStarted(JSON.parse(notes.stdout))
+      } catch {
+        notStarted = false
+      }
+      return notStarted ? { ...check, notStarted } : check
+    })
+    const verified = (data.comments ?? []).map((comment) => comment.body?.match(VERIFY_MARKER)).filter(Boolean)
+    const lastVerified = verified[verified.length - 1]
     const markers = (data.comments ?? []).map((comment) => comment.body?.match(REVIEW_MARKER)).filter(Boolean)
     const last = markers[markers.length - 1]
     return {
       base: data.baseRefName,
       files: (data.files ?? []).map((file) => file.path),
       isDraft: data.isDraft,
+      labels: (data.labels ?? []).map((label) => label.name),
       mergeable: data.mergeable,
       checks,
       reviewDecision: data.reviewDecision,
       review: last ? { verdict: last[1], sha: last[2] } : undefined,
+      localVerify: lastVerified ? { sha: lastVerified[1] } : undefined,
       headSha: data.headRefOid,
     }
   }

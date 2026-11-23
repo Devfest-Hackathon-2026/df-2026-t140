@@ -10,7 +10,7 @@ import type { BuildModelInput } from './types'
  *   AI が書いたコードは実行しない（技術構成）
  * - 送るのは、場所の名前、一言の説明、利用者の希望の文だけ。Maps 由来の内容は送らない（規約 3.2.3(c)）
  * - 固定の応答（stub）は、場所の種類に合う部品の模型（logic/prefabs.ts）。本物の Argon は、手元の agy でだけつないである
- *   （1 日 20 回の上限は adapters/gemini/agy.ts。超えたら部品の模型）。Cloud（vertex）でつなぐときは、累計 80 回の上限も要る
+ *   （1 日 20 回の上限は adapters/gemini/agy.ts。超えたら部品の模型）。Cloud（vertex）でつなぐときは、累計 300 回の上限も要る
  */
 export const buildModelTask: GeminiTask<BuildModelInput, ModelJson> = {
   name: 'build-model',

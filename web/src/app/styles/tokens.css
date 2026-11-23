@@ -44,6 +44,7 @@
   --color-route-edge: #0f5aa3;
   --color-route-soft: #e1eefb;
   --color-danger: #c4281c;
+  --color-danger-edge: #93180f;
   --color-toast: #3c3c3c;
 
   /* 地図が入る場所の仮の色（地図そのものの色はマップ ID で決まる） */

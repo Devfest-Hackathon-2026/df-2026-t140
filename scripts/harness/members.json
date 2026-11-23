@@ -1,0 +1,9 @@
+{
+  "$comment": "チームの名簿。作業宣言の owner（git の user.name）から、GitHub のアカウントと Discord のユーザー ID を引く。着手した Issue の担当（assignee）と、Discord のカードの「担当」のメンションに使う（lib/members.mjs）。discord は Discord の開発者モードで、名前を右クリック →「ユーザー ID をコピー」で取れる数字。空なら GitHub のアカウント名を文字で出す",
+  "members": [
+    { "github": "Lazyturtle0852", "names": ["Lazyturtle0852", "Active_Turtle", "たーとる", "かめ"], "discord": "679684163590160391" },
+    { "github": "Takana-12", "names": ["Takana", "たかな"], "discord": "1358622387834322944" },
+    { "github": "Youkin06", "names": ["Youkin06"], "discord": "1370982218947756123" },
+    { "github": "Mah110hat", "names": ["Paralysis", "Mah110hat"], "discord": "1368215729291268176" }
+  ]
+}

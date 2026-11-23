@@ -18,5 +18,6 @@ export {
   rememberMyName,
 } from './model/member'
 export type { Member } from './model/types'
+export { ownerUidOf } from './model/owner'
 export { useMembers, useMyMembership, useMyMemberships } from './model/useMembers'
 export { Avatar, AvatarStack } from './ui/Avatar'

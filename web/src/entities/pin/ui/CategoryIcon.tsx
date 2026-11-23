@@ -61,6 +61,13 @@ const PATHS: Record<PinCategory, ReactNode> = {
       <path d="M6 13v6.5h12V13M10 19.5v-4h4v4" />
     </>
   ),
+  // ベッド
+  lodging: (
+    <>
+      <path d="M3.5 19V6.5M3.5 15.5h17V19M20.5 15.5v-2.5a3 3 0 0 0-3-3h-6v5.5" />
+      <circle cx="7.3" cy="11.6" r="1.7" />
+    </>
+  ),
 }
 
 interface Props {

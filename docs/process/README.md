@@ -12,16 +12,16 @@
 | --- | --- | --- | --- |
 | 1. AI ツールのフックと権限 | Claude Code、Codex、Gemini CLI、Antigravity（設定したもの） | 危険な命令（main と deploy への push、force push、--no-verify、reset --hard、デプロイ、有料 API、.env）、main での編集、ガードレールの書き換え | ツールの外で動かせば迂回できる |
 | 2. git hooks（`.githooks/`） | すべての AI と人 | main への commit と push、秘密情報、置いてはいけないファイル、commit の形、ブランチ名、force push（deploy への反映も早送りだけ）、作業宣言のない push、層の違反 | `--no-verify`（AI は層 1 が止める） |
-| 3. CI（`.github/workflows/harness.yml`） | すべての PR | 層の違反、作業宣言、ブランチ名、秘密情報、他社 AI の SDK、文書のリンク切れ、人の判断の書き方 | できない（GitHub 上で動く） |
-| 4. レビュー | merge の前 | 完了条件を満たしたか、正本と合っているか（別のコンテキストのレビュー役と人）。AI の merge は、会話で人と合意した作業で、CI が通り、レビューで承認された PR（CI と承認はガードが確かめる。合意は確かめられない） | — |
+| 3. CI（`.github/workflows/harness.yml`。PR では走らせず、Actions の画面から手で走らせる。同じ確認を、AI が作業を終える前に手元で走らせて記録する：`npm run verify:local`。merge の条件はこの記録。2026-11-22） | 手で走らせたとき（手元の確認はすべての PR） | 層の違反、作業宣言、ブランチ名、秘密情報、他社 AI の SDK、文書のリンク切れ、人の判断の書き方 | できない（GitHub 上で動く） |
+| 4. レビュー | merge の前 | 完了条件を満たしたか、正本と合っているか（別のコンテキストのレビュー役と人）。AI の merge は、会話で人と合意した作業で、先頭の commit の手元の確認の記録があり、レビューで承認された PR（記録と承認はガードが確かめる。合意は確かめられない。CI は merge の条件にしない。2026-11-22） | — |
 
 main にはブランチ保護をかけません（Takana の決定、`todo/humans/2026-11-07-main-branch-protection.md`）。層 1〜3 が main を守ります。
 
 本番へのデプロイは、人が main を `deploy` ブランチへ反映したときだけ GitHub Actions が行います（かめの決定、`todo/humans/2026-11-07-deploy-branch.md`）。main への merge では本番は変わりません。AI が deploy へ push・commit・merge するのは層 1 が止めます（`no-push-deploy`）。git hooks は人の反映を通すので、deploy への push を人に限るのは GitHub のブランチ保護で行います（人の作業、`todo/humans/2026-11-07-deploy-branch-setup.md`）。
 
-人の判断（todo/humans/）は、GitHub Projects のカンバン（Project #1「Konbu_DevFest」）の Status「人間待ち」と連動します。`npm run human -- add` が止まっている Issue を「人間待ち」に置き（番号がなければ人の作業を Issue として起票し）、`done` が「In Progress」に戻します。セッションの始めと `npm run work -- status` に「人間待ち」の一覧が出ます。正本は todo/humans/ で、カンバンを動かせない（gh の project スコープがない、オフライン）ときは警告だけ出して記録は続けます（`scripts/harness/lib/kanban.mjs`、[todo/humans/README.md](../../todo/humans/README.md)「カンバンとの連動」）。
+作業の状態は、GitHub Projects のカンバン（Project #1「Konbu_DevFest」）の列（Todo / In Progress / 人間待ち / Done）だけで表します（かめの決定、2026-11-16。`status:*` ラベルは廃止）。列は一次の記録（todo/humans/、作業宣言、Issue と PR）から `scripts/harness/lib/board.mjs` が決め、GitHub Actions（`.github/workflows/kanban.yml`）だけが動かします。人間待ちの Issue には「⏸ 人間待ち」のコメントが付き、人間待ちが残る Issue は PR の merge でも閉じません（[work.md](work.md)「カンバン」、[todo/humans/README.md](../../todo/humans/README.md)「カンバンとの連動」）。
 
-例外として、todo/humans/ だけを変える commit は main で作って直接 push してよく、層 1 と層 2 はこれを通します（ほかのファイルが混ざれば止めます）。層 3 は main への push でも、人の判断の書き方を確かめます（[work.md](work.md)「人の判断（todo/humans/）は main に直接入れる」）。
+例外として、todo/humans/ だけを変える commit は main で作って直接 push してよく、層 1 と層 2 はこれを通します（ほかのファイルが混ざれば止めます）。人の判断の書き方は、AI が作業を終える前の手元の確認（層 3 と同じチェック）で確かめます（[work.md](work.md)「人の判断（todo/humans/）は main に直接入れる」）。
 
 ガードは、止めるときに必ず「代わりにどうするか」を返します。夜中に人がいなくても、AI が止まったまま迷わないようにするためです。止めすぎると AI が迂回を探し始めるので、止めすぎも失敗として評価用の入力セットで測っています（`scripts/harness/tests/cases/guard-cases.mjs` の正常系）。
 
@@ -44,7 +44,7 @@ main にはブランチ保護をかけません（Takana の決定、`todo/human
 | 費用、有料 API、上限の変更 | | | ✓ |
 | .env、秘密情報、Cloud・Firebase・GitHub の設定と権限 | | | ✓ |
 | commit、push、PR の作成 | ✓ | | |
-| merge（会話で人と合意した作業で、ドラフトでなく、CI が通り、ぶつからず、レビューで承認されたもの。人の merge 指示は待たない。合意がない作業と、人が「merge しない」と言った作業はレビューで止めて人に伝える。作業宣言だけの PR は `npm run work -- declare` が指示なしで入れる） | ✓ | | |
+| merge（会話で人と合意した作業で、作業中（ドラフトか「作業中」ラベル）でなく、先頭の commit の手元の確認の記録があり、ぶつからず、レビューで承認されたもの。人の merge 指示は待たない。合意がない作業と、人が「merge しない」と言った作業はレビューで止めて人に伝える。作業宣言だけの PR は `npm run work -- declare` が指示なしで入れる） | ✓ | | |
 | 本番への反映（main から deploy ブランチへ）、手元からのデプロイ、PR の承認（GitHub の approve）、条件を満たさない merge | | | ✓ |
 | ガードレール（hooks、CI、権限）を弱める変更 | | | ✓ |
 
@@ -55,7 +55,9 @@ main にはブランチ保護をかけません（Takana の決定、`todo/human
 | `scripts/harness/lib/` | 判断の本体（ガード、層のチェック、作業宣言、人の判断、秘密情報、トレース）。依存なしの Node |
 | `scripts/harness/hook.mjs` | AI ツールのフックの入口。ツールごとに入出力の形をそろえるだけのアダプター |
 | `scripts/harness/git-hook.mjs`、`.githooks/` | git hooks |
-| `scripts/harness/work.mjs`、`human.mjs` | `npm run work`、`npm run human`（カンバンとの連動は `lib/kanban.mjs`） |
+| `scripts/harness/work.mjs`、`human.mjs` | `npm run work`、`npm run human` |
+| `scripts/harness/kanban-sync.mjs`、`lib/board.mjs`、`lib/kanban.mjs` | カンバンと Issue を一次の記録に合わせる（Actions の `kanban.yml` が動かす）。決め方、実行、gh の操作 |
+| `scripts/harness/notify-discord.mjs`、`lib/discord.mjs` | Discord に知らせる文面と送る処理。通知は 2026-11-22 にやめ、ワークフローからは呼ばない（[work.md](work.md)「Discord への通知」） |
 | `scripts/harness/check.mjs`、`review-pack.mjs` | 機械のチェックと、レビュー役に渡すパック |
 | `scripts/harness/tests/` | ハーネスの評価用の入力セット（正常系と異常系）とテスト |
 | `evals/review/` | レビュー役（LLM の判断）の評価セット |

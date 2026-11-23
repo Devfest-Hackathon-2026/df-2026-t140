@@ -1,0 +1,81 @@
+.root {
+  position: relative;
+  flex: none;
+}
+
+/* ボタンの下、右端をそろえて出すメニュー。閉じているあいだも描いたまま、見えなくする */
+.menu {
+  position: absolute;
+  top: calc(100% + var(--space-2));
+  right: 0;
+  z-index: 2;
+  display: grid;
+  gap: var(--space-1);
+  min-width: 260px;
+  padding: var(--space-2);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-m);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-float);
+  visibility: hidden;
+  opacity: 0;
+  transform: translateY(-4px);
+  transition:
+    opacity 120ms ease-out,
+    transform 120ms ease-out,
+    visibility 0s linear 120ms;
+}
+
+.open {
+  visibility: visible;
+  opacity: 1;
+  transform: none;
+  transition:
+    opacity 120ms ease-out,
+    transform 120ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .menu,
+  .open {
+    transition: none;
+  }
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: var(--tap-size);
+  padding: 0 var(--space-3);
+  border: none;
+  border-radius: var(--radius-s);
+  background: none;
+  color: var(--color-text);
+  font: inherit;
+  font-weight: var(--font-weight-heading);
+  text-align: left;
+  /* リンクの項目（Google マップ）も、ボタンの項目と同じ見た目にする */
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.item:hover:not(:disabled) {
+  background: var(--color-surface-sunken);
+}
+
+.item:focus-visible {
+  outline: 3px solid var(--color-route);
+  outline-offset: 0;
+}
+
+.item:disabled {
+  color: var(--color-text-sub);
+  cursor: default;
+}
+
+.item > svg {
+  flex: none;
+  color: var(--color-text-sub);
+}

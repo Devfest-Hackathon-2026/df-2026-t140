@@ -9,6 +9,7 @@ const ID = /^[A-Za-z0-9_-]{1,128}$/
 /** 断った理由を、画面に出せる形（コードと文）にする */
 const REFUSALS: Record<Exclude<RequestBuildResult, 'ok'>, HttpsError> = {
   'not-member': new HttpsError('permission-denied', 'この旅のメンバーではありません'),
+  confirmed: new HttpsError('failed-precondition', '旅程が確定しているので、建てられません'),
   'not-found': new HttpsError('not-found', 'このピンが見つかりません'),
   'already-built': new HttpsError('failed-precondition', 'この場所は、もう建築がはじまっています'),
   'limit-reached': new HttpsError('resource-exhausted', `建築は、1 つの旅で ${BUILD_LIMIT_PER_TRIP} 棟までです`),

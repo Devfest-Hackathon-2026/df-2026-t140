@@ -1,4 +1,5 @@
 import type { WithId } from '@/shared/api'
+import { translate } from '../../../shared/lib/language.ts'
 import type { Route, RouteStop, RouteStyle } from './types'
 
 /** ルート案を出すのに要る、建った場所の数。Functions の決め（functions/src/domain/route.ts）と合わせる */
@@ -27,8 +28,8 @@ export function shioriRouteOf(routes: readonly WithId<Route>[], decidedRouteId: 
 export function shortDurationLabel(minutes: number): string {
   const hours = Math.floor(minutes / 60)
   const rest = minutes % 60
-  if (hours === 0) return `${rest}分`
-  return rest === 0 ? `${hours}h` : `${hours}h${String(rest).padStart(2, '0')}`
+  if (hours === 0) return translate(`${rest}分`, `${rest}m`)
+  return rest === 0 ? `${hours}h` : translate(`${hours}h${String(rest).padStart(2, '0')}`, `${hours}h ${rest}m`)
 }
 
 /** 案の種類の、画面に出す名前と、ほかの案との違い */
@@ -42,8 +43,10 @@ export const STYLE_INFO: Record<RouteStyle, { title: string; summary: string }> 
 export function durationLabel(minutes: number): string {
   const hours = Math.floor(minutes / 60)
   const rest = minutes % 60
-  if (hours === 0) return `${rest} 分`
-  return rest === 0 ? `${hours} 時間` : `${hours} 時間 ${rest} 分`
+  if (hours === 0) return translate(`${rest} 分`, `${rest} min`)
+  return rest === 0
+    ? translate(`${hours} 時間`, `${hours} hr`)
+    : translate(`${hours} 時間 ${rest} 分`, `${hours} hr ${rest} min`)
 }
 
 /** スケジュールを日ごとに分ける（1 日目から順） */
@@ -90,7 +93,7 @@ export function leadingRoute(routes: readonly WithId<Route>[], votedRouteIds: re
 
 /**
  * しおりの地図の線の点。場所を順に結び、道の形（Routes の区間の形）がある区間はそれに沿わせ、ない区間はまっすぐ結ぶ。
- * legPaths は「どこから>どこへ」（ピンの ID）をキーにした区間の形。保存しないもので、しおりを開いているあいだだけ渡る
+ * legPaths は「どこから>どこへ」（行の ID。ふつうはピンの ID）をキーにした区間の形。stops の id も行の ID。保存しないもので、しおりを開いているあいだだけ渡る
  */
 export function roadLinePoints<P extends { lat: number; lng: number }>(
   stops: readonly { id: string; location: P }[],

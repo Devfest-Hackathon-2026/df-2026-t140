@@ -1,42 +1,17 @@
 name: CI
 
+# PR と main への merge では走らせない。npm run verify は本番への反映（deploy ブランチ）のときに Deploy がまとめて確かめ、
+# merge の条件は手元の確認の記録にする（Lazyturtle0852 の決定、2026-11-22。todo/humans/2026-11-22-merge-guard-runner-offline.md）。
+# 手で確かめたいときだけ、Actions の画面から走らせる。重い確認を飛ばす変更の決めは scripts/harness/lib/verify-local.mjs の LIGHT_PATHS
 on:
-  pull_request:
-    # 文書とハーネスの設定だけの変更では、重い確認（Emulator）を走らせない。ハーネスのチェックは harness.yml が行う
-    paths-ignore:
-      - 'docs/**'
-      - 'todo/**'
-      - 'transcripts/**'
-      - '**/*.md'
-      - '.claude/**'
-      - '.agents/**'
-      - '.codex/**'
-      - '.gemini/**'
-      - '.githooks/**'
-      - 'evals/**'
-      - 'harness.config.json'
-  # main への merge のあとにも同じ確認を行う。main への merge では本番に出ないので、出す前の確認はここと deploy.yml の verify が担う
-  push:
-    branches: [main]
-    paths-ignore:
-      - 'docs/**'
-      - 'todo/**'
-      - 'transcripts/**'
-      - '**/*.md'
-      - '.claude/**'
-      - '.agents/**'
-      - '.codex/**'
-      - '.gemini/**'
-      - '.githooks/**'
-      - 'evals/**'
-      - 'harness.config.json'
+  workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
   verify:
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
     env:
       # ブラウザ用の Maps キー。リファラと API を制限してある。リポジトリには置かない
       VITE_GOOGLE_MAPS_API_KEY: ${{ secrets.GOOGLE_MAPS_API_KEY }}

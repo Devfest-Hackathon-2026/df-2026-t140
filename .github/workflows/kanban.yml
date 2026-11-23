@@ -1,0 +1,55 @@
+name: Kanban
+
+# カンバン（GitHub Projects の Status）と Issue を、一次の記録（todo/humans/、作業宣言、Issue と PR）に合わせる。
+# 状態はカンバンに一本化し、動かすのはこのワークフローだけ（かめの決定、2026-11-16。docs/process/README.md）。
+# 決め方は scripts/harness/lib/board.mjs、実行は scripts/harness/kanban-sync.mjs。依存なしの Node なので数十秒で終わる。
+#
+# リポジトリは非公開で、Actions の時間は無料枠から引かれる。そのため状態が変わりうるときだけ動かす：
+#   - main への push のうち、作業宣言（docs/work/）か人の判断（todo/humans/）が変わったもの
+#   - Issue が開いた・閉じた・開け直されたとき（PR の merge で閉じたときも含む）
+#   - 取りこぼしの保険に 1 日 1 回と、手で動かすとき（npm run human -- sync）
+# このワークフローの標準のトークン（GH_TOKEN）で行った操作は、ほかのワークフローを動かさない（繰り返しにならない）。
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'docs/work/**'
+      - 'todo/humans/**'
+      - 'scripts/harness/members.json'
+  issues:
+    types: [opened, closed, reopened]
+  schedule:
+    - cron: '17 21 * * *' # 毎日 6:17 JST
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
+# 古い実行は取り消さず、順に動かす。Discord に送ってから Issue に番号を書くまでのあいだに取り消されると、
+# 番号が残らず、次の実行で同じ人間待ちをもう一度送ってしまうため（毎回すべてを決め直すので、順に動かしても結果は同じ）
+concurrency:
+  group: kanban
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: main
+          # 進行中の作業（各ブランチの作業宣言と、main より先の commit）を見るため、履歴とブランチをすべて取る
+          fetch-depth: 0
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .tool-versions
+      - run: node scripts/harness/kanban-sync.mjs
+        env:
+          GH_TOKEN: ${{ github.token }}
+          # カンバン（ユーザーの Project）を動かすには project の権限が要り、標準のトークンでは足りない。
+          # 登録は人の作業（todo/humans/2026-11-16-kanban-token.md）。ないときはカンバンだけ飛ばす
+          KANBAN_TOKEN: ${{ secrets.KANBAN_TOKEN }}
+          # Discord への通知はやめた（Lazyturtle0852 の決定、2026-11-22）。Webhook を渡さないので、kanban-sync は Discord に送らない

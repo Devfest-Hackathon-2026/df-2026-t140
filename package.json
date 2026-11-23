@@ -1,6 +1,7 @@
 {
   "name": "konbu-devfest",
   "private": true,
+  "license": "UNLICENSED",
   "engines": {
     "node": "24"
   },
@@ -10,9 +11,12 @@
     "lint": "npm run lint --prefix web && node scripts/harness/check.mjs --code",
     "copy:check": "node scripts/copy-check.mjs",
     "dev": "node scripts/check-env.mjs && npm run build && concurrently --kill-others-on-fail --names emu,fn,web,seed \"firebase emulators:start --project konbu-devfest-hackathon-2026\" \"npm run watch --prefix functions\" \"npm run dev --prefix web\" \"node scripts/seed.mjs\"",
+    "dev:alt": "node scripts/check-env.mjs && node scripts/dev-alt.mjs",
     "verify": "node scripts/check-env.mjs && npm run lint && npm run build && node --test scripts/functions.test.mjs scripts/web.test.mjs scripts/map-declutter.test.mjs && AI_PASSPHRASE=smoke-test-passphrase firebase emulators:exec --project konbu-devfest-hackathon-2026 --only hosting,auth,firestore,functions,storage \"node scripts/smoke.mjs local && node scripts/sim-headless.mjs\"",
     "deploy": "firebase deploy --project konbu-devfest-hackathon-2026 --only hosting,firestore,storage,functions --non-interactive",
     "smoke:prod": "node scripts/smoke.mjs prod",
+    "release": "node scripts/harness/release.mjs",
+    "verify:local": "node scripts/harness/verify-local.mjs",
     "prepare": "node scripts/harness/install-hooks.mjs",
     "work": "node scripts/harness/work.mjs",
     "human": "node scripts/harness/human.mjs",

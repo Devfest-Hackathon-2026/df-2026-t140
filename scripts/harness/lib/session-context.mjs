@@ -2,13 +2,14 @@
 // 人に聞かなくても、誰の端末で、どの作業をしていて、ほかに誰が何をしているかが分かるようにする。
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { isProtectedBranch, ledgerPathFor } from './conventions.mjs'
+import { isProtectedBranch, isWipPr, ledgerPathFor, WIP_LABEL } from './conventions.mjs'
 import { readAutonomy } from './autonomy.mjs'
 import { ensureGitHooks } from './githooks.mjs'
 import { parseLedger } from './ledger.mjs'
 import { currentBranch, gitOut } from './proc.mjs'
 import { describeSync, syncWithMain } from './sync-main.mjs'
-import { backlogIssues, collectHumanTodos, collectHumanWaiting, collectOpenIssues, collectWork, fetchOrigin, findOverlaps, openHumanTodos } from './work-index.mjs'
+import { humanTargets } from './board.mjs'
+import { backlogIssues, heldIssuesByAssignee, collectHumanTodos, collectOpenIssues, collectWork, fetchOrigin, findOverlaps, openHumanTodos } from './work-index.mjs'
 
 const MAX_OTHERS = 8
 const MAX_TODOS = 6
@@ -86,30 +87,32 @@ export function buildSessionContext({ projectDir, tool = 'claude', fetch = proce
   if (others.length === 0) lines.push('- なし')
   for (const entry of others.slice(0, MAX_OTHERS)) {
     const issue = entry.issue ? `Issue #${entry.issue}、` : ''
-    const pr = entry.pr ? `PR #${entry.pr.number}${entry.pr.isDraft ? ' draft' : ''}` : 'PR なし'
+    const pr = entry.pr ? `PR #${entry.pr.number}${isWipPr(entry.pr) ? ` ${WIP_LABEL}` : ''}` : 'PR なし'
     const scope = entry.scope.length > 0 ? entry.scope.slice(0, 4).join(', ') + (entry.scope.length > 4 ? ' …' : '') : '範囲の宣言なし'
     lines.push(`- ${entry.branch}（${entry.owner || '不明'}、${issue}${pr}、${entry.stale ? '止まっている？' : entry.status}）${entry.title}／範囲：${scope}`)
   }
   if (others.length > MAX_OTHERS) lines.push(`- …ほか ${others.length - MAX_OTHERS} 件（\`npm run work -- status\`）`)
 
-  // カンバンは、GitHub につながると分かったときだけ読む（オフラインで待ち時間を重ねない。フックの timeout の内に収める）
-  let waiting
+  const todos = openHumanTodos(collectHumanTodos(projectDir))
   if (fetch) {
     const { issues, ok } = collectOpenIssues(projectDir, entries)
-    if (ok) waiting = collectHumanWaiting(projectDir)
     if (ok) {
-      const backlog = backlogIssues(issues)
+      const backlog = backlogIssues(issues, todos)
       lines.push('')
       lines.push(`## 未着手の Issue（${backlog.length} 件）`)
       if (backlog.length === 0) {
         lines.push('- なし（新しい開発タスクは `npm run work -- issue --title "…"` で起票するか、`npm run work -- declare` で自動起票されます）')
       } else {
-        for (const item of backlog.slice(0, MAX_ISSUES)) {
-          const labelText = item.labels.length > 0 ? ` [${item.labels.join(', ')}]` : ''
-          lines.push(`- #${item.number} ${item.title}${labelText}`)
-        }
+        for (const item of backlog.slice(0, MAX_ISSUES)) lines.push(`- #${item.number} ${item.title}`)
         if (backlog.length > MAX_ISSUES) lines.push(`- …ほか ${backlog.length - MAX_ISSUES} 件（\`npm run work -- status\`）`)
         lines.push('- 着手するときは `npm run work -- start <種類>/<内容> --issue <番号>`')
+      }
+      const held = heldIssuesByAssignee(issues, todos)
+      if (held.length > 0) {
+        lines.push('')
+        lines.push(`## 担当が付いていて、まだ作業していない Issue（${held.length} 件）`)
+        for (const item of held.slice(0, MAX_ISSUES)) lines.push(`- #${item.number} ${item.title}（担当：${item.assignees.join('、')}）`)
+        lines.push('- 人の判断が決まって戻ってきた作業など。担当の人の作業なので、ほかの人は拾わない')
       }
     }
   }
@@ -129,23 +132,15 @@ export function buildSessionContext({ projectDir, tool = 'claude', fetch = proce
     }
   }
 
-  const todos = openHumanTodos(collectHumanTodos(projectDir))
-  if (waiting?.ok) {
-    lines.push('')
-    lines.push(`## カンバンの「${waiting.column}」（${waiting.items.length} 件）`)
-    if (waiting.items.length === 0) lines.push('- なし')
-    for (const item of waiting.items.slice(0, MAX_TODOS)) lines.push(`- #${item.number ?? '?'} ${item.title}`)
-    if (waiting.items.length > MAX_TODOS) lines.push(`- …ほか ${waiting.items.length - MAX_TODOS} 件（\`npm run work -- status\`）`)
-  } else if (waiting && todos.length > 0) {
-    lines.push('')
-    lines.push(`- 注意：カンバンの「${waiting.column}」を読めませんでした（${waiting.warning}）。下の todo/humans/ を見ます`)
-  }
   if (todos.length > 0) {
     lines.push('')
     lines.push(`## 人の判断待ち（todo/humans/、${todos.length} 件）`)
-    for (const todo of todos.slice(0, MAX_TODOS)) lines.push(`- ${todo.title}（${todo.kind}、${todo.path}${todo.issue ? `、#${todo.issue}` : ''}）`)
+    for (const todo of todos.slice(0, MAX_TODOS)) {
+      const targets = humanTargets(todo).map((number) => `#${number}`).join(' ')
+      lines.push(`- ${todo.title}（${todo.kind}、${todo.path}${targets ? `、止めている：${targets}` : ''}）`)
+    }
     lines.push('- これらに関わる作業は、判断が出るまで仮の形で進めるか、ほかの作業を先にします')
-    lines.push('- 人の判断を足すのも決まったことを記録するのも `npm run human`（カンバンの「人間待ち」も一緒に動きます）')
+    lines.push('- 人の判断を足すのも決まったことを記録するのも `npm run human`。main に入れると、GitHub Actions が Issue へのコメントとカンバンの「人間待ち」を更新します')
   }
 
   lines.push('')

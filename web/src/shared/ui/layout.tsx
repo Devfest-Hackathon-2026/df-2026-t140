@@ -1,3 +1,4 @@
+import { translate as t } from '@/shared/lib'
 import type { ReactNode } from 'react'
 import styles from './layout.module.css'
 
@@ -35,7 +36,7 @@ export function Sheet({ title, lead, action, children }: SheetProps) {
 }
 
 /** 読み込み中 */
-export function Loading({ label = '読み込んでいます…' }: { label?: string }) {
+export function Loading({ label = t('読み込んでいます…', 'Loading…') }: { label?: string }) {
   return (
     <div className={styles.center} role="status">
       <div className={styles.spinner} />

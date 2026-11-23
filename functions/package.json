@@ -1,6 +1,7 @@
 {
   "name": "functions",
   "private": true,
+  "license": "UNLICENSED",
   "main": "lib/index.js",
   "engines": {
     "node": "24"

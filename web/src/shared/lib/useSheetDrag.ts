@@ -24,19 +24,27 @@ interface DragStart {
   lastTime: number
   velocity: number
   range: number
+  /** 上へ引いてシートを伸ばせる量（px）。伸ばせないシートは 0 */
+  grow: number
   moved: boolean
   /** 中のボタンやリンクの上から押し始めたか（押しただけなら、そのボタンの動きに任せる） */
   onControl: boolean
+  /**
+   * 取っ手の帯（data-sheet-handle）の上から押し始めたか。開いた形では、ここを押しただけのときだけ閉じる
+   * （つかめる範囲を見出しの行まで広げても、見出しの空いた所を押しただけでは閉じない）
+   */
+  onHandle: boolean
 }
 
 /**
  * 開いた形を 2 段（ふつう・大きい）にするシートが渡す処理。
  * grow：ふつうの高さで、取っ手を上へ引いた。shrink：大きい高さで、取っ手を下へ引いた（閉じずに、ふつうの高さに戻す）。
- * どちらも、渡さなければ今までどおり（上へは動かず、下へ引くと閉じる）
+ * どちらも、渡さなければ今までどおり（上へは動かず、下へ引くと閉じる）。
+ * 引数は、離したときに指で動かしていた量（px。grow は上へ伸ばした量、shrink は下へ下げた量）。動きの始まりの位置に使う
  */
 export interface SheetSteps {
-  grow?: () => void
-  shrink?: () => void
+  grow?: (grown: number) => void
+  shrink?: (lowered: number) => void
 }
 
 /** シートごとに変える動き。渡さなければ、しおり・場所の情報のシートと同じ */
@@ -48,6 +56,11 @@ export interface SheetDragOptions {
   tap?: boolean
   /** 動ける範囲（px）を、つかむたびに測る。渡さなければ、開いた形のシートの高さと peekVisible の差 */
   measureRange?: (from: SheetRest) => number
+  /**
+   * 開いた形で、上へ引いたときに指についてシートを伸ばせる量（px）を、つかむたびに測る（しおり S11 を全面へ引き上げる）。
+   * 渡さなければ、上へは動かない。伸びた見た目（offset が負のとき）は、シートの側が付ける
+   */
+  measureGrow?: () => number
 }
 
 /**
@@ -61,7 +74,7 @@ export function useSheetDrag(
   peekVisible: number,
   onSettle: (to: SheetRest, offset: number) => void,
   steps: SheetSteps = {},
-  { tap = true, measureRange }: SheetDragOptions = {},
+  { tap = true, measureRange, measureGrow }: SheetDragOptions = {},
 ) {
   // ドラッグ中・戻る途中のずれ（px、下向きが正）。null ならドラッグしていない
   const [offset, setOffset] = useState<number | null>(null)
@@ -99,12 +112,14 @@ export function useSheetDrag(
         lastTime: event.timeStamp,
         velocity: 0,
         range: Math.max(0, measureRange ? measureRange(from) : full - peekVisible),
+        grow: from === 'full' && measureGrow ? Math.max(0, measureGrow()) : 0,
         moved: false,
         onControl: (event.target as HTMLElement).closest('button, a') !== null,
+        onHandle: (event.target as HTMLElement).closest('[data-sheet-handle]') !== null,
       }
       setReturning(false)
     },
-    [from, peekVisible, measureRange],
+    [from, peekVisible, measureRange, measureGrow],
   )
 
   const onPointerMove = useCallback(
@@ -132,7 +147,7 @@ export function useSheetDrag(
       if (elapsed > 0) drag.velocity = (event.clientY - drag.lastY) / elapsed
       drag.lastY = event.clientY
       drag.lastTime = event.timeStamp
-      setOffset(dragOffset(from, dy, drag.range))
+      setOffset(dragOffset(from, dy, drag.range, drag.grow))
     },
     [from],
   )
@@ -146,8 +161,9 @@ export function useSheetDrag(
         // 押しただけ。開いた形の取っ手なら閉じる（Apple の取っ手と同じ）。
         // 閉じた形なら、取っ手のあたり（中のボタンやリンクの外）を押したときに開く（ボタンの上なら、そのボタンに任せる）
         if (cancelled || !tap) return
-        if (from === 'full') onSettle('peek', 0)
-        else if (!drag.onControl) onSettle('full', 0)
+        if (from === 'full') {
+          if (drag.onHandle) onSettle('peek', 0)
+        } else if (!drag.onControl) onSettle('full', 0)
         return
       }
       // 縦に動かした。親のスワイプ（useSwipe）に、離したことを伝えない（斜めに動かしても前後へ移らないように）
@@ -163,14 +179,20 @@ export function useSheetDrag(
       // 開いた形が 2 段のシート：ふつうの高さで上へ引いたら大きく、大きい高さで下へ引いたら（閉じずに）ふつうの高さへ
       if (!cancelled && !backToStart && from === 'full' && steps.grow && dragGrow(dy, velocity)) {
         setOffset(null)
-        steps.grow()
+        steps.grow(Math.max(0, -dragOffset(from, dy, drag.range, drag.grow)))
+        return
+      }
+      const moved = dragOffset(from, dy, drag.range, drag.grow)
+      // 広げた形（2 段めの高さ）で下へ引いた：上へ引いて広げるときと同じだけ動かせば、元の高さへ戻す（閉じはしない）
+      if (!cancelled && !backToStart && from === 'full' && steps.shrink && dragGrow(-dy, -velocity)) {
+        setOffset(null)
+        steps.shrink(Math.max(0, moved))
         return
       }
       const to = cancelled || backToStart ? from : dragSettle(from, dy, velocity, drag.range)
-      const moved = dragOffset(from, dy, drag.range)
       if (to === 'peek' && from === 'full' && steps.shrink) {
         setOffset(null)
-        steps.shrink()
+        steps.shrink(Math.max(0, moved))
         return
       }
       if (to === from) {

@@ -18,11 +18,13 @@ const FLICK_MIN_PX = 12
 
 /**
  * ドラッグ中にシートを動かす量（px。下向きが正）。全部開いた状態からは下へだけ、閉じた状態からは上へだけ、
- * 2 つの止まる高さの差（range）までしか動かさない
+ * 2 つの止まる高さの差（range）までしか動かさない。
+ * grow を渡すと、全部開いた状態から上へも、その量まで動かす（上へ引くとシートが伸びる。しおり S11 から全面へ）
  */
-export function dragOffset(from: SheetRest, dy: number, range: number): number {
+export function dragOffset(from: SheetRest, dy: number, range: number, grow = 0): number {
   const limit = Math.max(0, range)
-  if (from === 'full') return Math.min(Math.max(dy, 0), limit)
+  // 0 - … は、伸ばせないとき（grow が 0）に -0 を返さないため
+  if (from === 'full') return Math.min(Math.max(dy, 0 - Math.max(0, grow)), limit)
   return Math.max(Math.min(dy, 0), -limit)
 }
 

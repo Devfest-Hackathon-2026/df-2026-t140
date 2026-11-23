@@ -1,0 +1,102 @@
+/* 地図の画面を出している間は、ページ全体をスクロールさせない（旅の地図の画面と同じ） */
+:global(html):has(.page),
+:global(html):has(.page) :global(body) {
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+/* 画面いっぱいの枠。地図が下に広がり、上の帯と下の欄がその上に重なる */
+.page {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 480px;
+  height: 100dvh;
+  margin: 0 auto;
+  overflow: hidden;
+}
+
+/* 上の帯：戻るボタンと、画面の名前。Google の著作権表示（上の端）と重ならないよう、上を 16px あける */
+.top {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: calc(var(--space-4) + env(safe-area-inset-top)) var(--space-4) 0;
+  pointer-events: none;
+}
+
+.top > * {
+  pointer-events: auto;
+}
+
+.band {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  min-width: 0;
+  min-height: var(--tap-size);
+  padding: 0 var(--space-4);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface);
+  box-shadow: 0 var(--edge-depth) 0 var(--color-edge);
+}
+
+.title {
+  font-size: var(--font-size-m);
+}
+
+.count {
+  flex: none;
+  color: var(--color-text-sub);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-heading);
+}
+
+/* 下の欄：これまでの旅。押すと、その旅のあたりへ寄る */
+.bottom {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  gap: var(--space-2);
+  margin-top: auto;
+  padding: var(--space-3) var(--space-4) calc(var(--space-4) + env(safe-area-inset-bottom));
+  border-top: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-sheet) var(--radius-sheet) 0 0;
+  background: var(--color-surface);
+}
+
+.label {
+  color: var(--color-text-sub);
+  font-size: var(--font-size-s);
+}
+
+.trips {
+  display: flex;
+  gap: var(--space-2);
+  margin: 0;
+  /* 下の厚み（影）が切れないよう、下を少しあける */
+  padding: 0 0 var(--space-2);
+  overflow-x: auto;
+  list-style: none;
+}
+
+.trips > li {
+  flex: none;
+}
+
+.tripCount {
+  color: var(--color-build-edge);
+}
+
+.blank {
+  margin: 0;
+  color: var(--color-text-sub);
+  font-weight: var(--font-weight-bold);
+  text-align: center;
+}

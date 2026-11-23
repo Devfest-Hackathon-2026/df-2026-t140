@@ -3,7 +3,7 @@
 // 止めるときは必ず「代わりにどうするか」を書く。夜中に人がいなくても AI が先へ進めるように。
 import { tmpdir } from 'node:os'
 import { isAbsolute, resolve } from 'node:path'
-import { checkBranchName, isDeployBranch, isProtectedBranch } from './conventions.mjs'
+import { checkBranchName, isDeployBranch, isProtectedBranch, isWipPr, WIP_LABEL } from './conventions.mjs'
 import { toPosix } from './paths.mjs'
 import { OTHER_AI_PACKAGES, onlyDirectToMain, PAID_AI_SWITCH, PAID_API_HOSTS, SUBMISSION_REMOTE } from './policy.mjs'
 import { flattenCommands } from './shell.mjs'
@@ -18,7 +18,7 @@ export const MESSAGES = {
   'no-destructive-git': 'この git の操作は、未 commit の変更や commit を戻せない形で消します。人の変更かもしれません。自分の変更を戻すなら、ファイルを指定して `git restore <ファイル>` か `git stash` を使います',
   'no-commit-on-main': 'main では commit も merge もしません。`npm run work -- start <種類>/<内容>` で作業ブランチを作ります（未 commit の変更はそのまま移ります）。例外は todo/humans/ だけを stage した commit（-a を付けず、`git add todo/humans/<ファイル>` のあとに `git commit`）。add と commit は && でつながず、別の命令で実行する（ガードは命令の前の stage を見る）',
   'branch-name': 'ブランチ名が決まりに合いません',
-  'no-ai-merge': 'AI が main へ merge してよいのは、ドラフトでなく、CI がすべて通り、main とぶつからず、レビューで承認された PR だけです。さらに、会話で人と合意した作業の PR に限ります（ガードはこれを確かめられません。人の merge 指示は待ちません）。作業宣言だけの PR（docs/work/ だけ）は別で、条件も指示も要りません。足りないもの：',
+  'no-ai-merge': 'AI が main へ merge してよいのは、作業中（ドラフトか「作業中」ラベル）でなく、先頭の commit の手元の確認の記録があり（`npm run work -- finish`。CI は条件にしない）、main とぶつからず、レビューで承認された PR だけです。さらに、会話で人と合意した作業の PR に限ります（ガードはこれを確かめられません。人の merge 指示は待ちません）。作業宣言だけの PR（docs/work/ だけ）は別で、条件も指示も要りません。足りないもの：',
   'no-ai-approve': 'PR の承認は人が行います。AI のレビュー結果はコメントで残します（Claude Code なら /review-pr）',
   'no-deploy': 'デプロイと本番の確認テストは、人が deploy ブランチへ反映したあとに GitHub Actions だけが行います。手元から行うことも、AI が Deploy を走らせることもしません。本番に出したいときは人に頼みます（`npm run human -- add`）',
   'no-paid-api': '費用がかかる API（Cloud の Gemini、Maps Platform）を、許可なく呼んだり有効にしたりしません。' + HUMAN,
@@ -307,20 +307,59 @@ function checkPush(args, ctx, add) {
 // レビューの結論の目印。review-pr の skill が PR のコメントに入れる。sha はレビューした commit
 export const REVIEW_MARKER = /<!-- harness-review verdict=(APPROVE|REQUEST_CHANGES|COMMENT) sha=([0-9a-f]{7,40}) -->/
 
+// gh pr view の statusCheckRollup を、merge の判断に使う形（{ name, state }）にする。
+// PR を閉じて開き直すなどで CI を流し直すと、同じチェックの古い結果も一覧に残る。
+// 古い失敗で止めないよう、同じワークフローの同じ名前のチェックは、一番新しく始まったものだけを残す
+export function latestChecks(rollup) {
+  const latest = new Map()
+  for (const check of rollup ?? []) {
+    const name = check.name ?? check.context ?? '?'
+    const key = `${check.workflowName ?? ''}\u0000${name}`
+    const at = checkTime(check)
+    const kept = latest.get(key)
+    if (!kept || at >= kept.at) latest.set(key, { at, check, name })
+  }
+  return [...latest.values()].map(({ check, name }) => ({
+    name,
+    state: check.conclusion || (check.status && check.status !== 'COMPLETED' ? 'PENDING' : check.state) || 'PENDING',
+    // ジョブのページ（.../job/<番号>）。落ちたチェックが「始まらなかった」のかを、注記で確かめるのに使う（hook.mjs）
+    ...(check.detailsUrl ? { url: check.detailsUrl } : {}),
+  }))
+}
+
+// チェックの新しさ。まだ終わっていないもの、時刻がないもの（キューに入っただけのときは
+// 0001-01-01 が返ることもある）は、終わった古い結果より新しいとみなす（古い成功で通さない）
+function checkTime(check) {
+  if (check.status && check.status !== 'COMPLETED') return Infinity
+  const at = Date.parse(check.startedAt ?? check.completedAt ?? '')
+  return Number.isFinite(at) && at > 0 ? at : Infinity
+}
+
 // AI が main へ merge してよいか。だめな理由を返す（空なら merge してよい）。
 // 手順を飛ばさないための確認で、改ざんへの防御ではない（目印は実装した AI も書ける）。
-// 確実に効くのは CI。人の承認を必須にする範囲は todo/humans/2026-11-07-human-approval-scope.md で人が決める
+// CI は条件にせず、手元の確認の記録を求める（2026-11-22）。人の承認を必須にする範囲は todo/humans/2026-11-07-human-approval-scope.md で人が決める
 export function mergeProblems(pr) {
   if (pr.base === 'main' && pr.files.length > 0 && pr.files.every((file) => file.startsWith('docs/work/'))) return [] // 作業宣言
   if (pr.base !== 'main') return []
   const problems = []
-  if (pr.isDraft) problems.push('ドラフトのまま（`npm run work -- finish` でレビュー待ちにする）')
+  if (isWipPr(pr)) problems.push(`作業中のまま（ドラフトか「${WIP_LABEL}」ラベル。\`npm run work -- finish\` でレビュー待ちにする）`)
   if (pr.mergeable === 'CONFLICTING') problems.push('main とぶつかっている（`git merge origin/main` で直す）')
   if (pr.mergeable === 'UNKNOWN') problems.push('ぶつかりの確認がまだ終わっていない（少し待ってからもう一度）')
+  // CI は merge の条件にしない。CI は本番への反映（deploy ブランチ）のときに Deploy の verify がまとめて確かめる
+  // （Lazyturtle0852 の決定、2026-11-22。todo/humans/2026-11-22-merge-guard-runner-offline.md）。
+  // 代わりに、今の先頭の commit を手元で確かめた記録（npm run verify:local の目印。localVerify）を求める。
+  // CI を手で走らせて落ちた結果があれば止める（始まらなかっただけ（notStarted）のもの、まだ走っているものは見ない）
   const checks = pr.checks ?? []
-  if (checks.length === 0) problems.push('CI の結果がない')
-  const failing = checks.filter((check) => !['SUCCESS', 'SKIPPED', 'NEUTRAL'].includes(check.state))
-  if (failing.length > 0) problems.push(`CI が通っていない（${failing.map((check) => `${check.name}：${check.state}`).join('、')}）`)
+  const failed = checks.filter((check) => check.state === 'FAILURE' && check.notStarted !== true)
+  if (failed.length > 0) problems.push(`CI が走って落ちた（${failed.map((check) => check.name).join('、')}）`)
+  const verifiedHere = Boolean(pr.headSha) && pr.localVerify?.sha === pr.headSha
+  if (!verifiedHere) {
+    problems.push(
+      pr.localVerify
+        ? '手元の確認の記録が前の commit のもの（`npm run verify:local` でもう一度確かめる）'
+        : '手元の確認の記録がない（`npm run verify:local` で確かめて、PR に記録を残す）',
+    )
+  }
   const reviewed = pr.reviewDecision === 'APPROVED' || (pr.review?.verdict === 'APPROVE' && pr.headSha?.startsWith(pr.review.sha))
   if (!reviewed) {
     problems.push(
@@ -390,10 +429,13 @@ function checkProgram(command, ctx, add) {
   }
   if (program === 'gsutil' && ['rm', 'rb', 'mv', 'rsync'].includes(args[0])) return add('no-cloud-change')
 
+  // main を deploy へ反映するスクリプト（npm run release）。中で deploy へ push するので、直接動かすのも止める
+  if (['node', 'bun', 'deno'].includes(program) && args.some((arg) => /(^|\/)release\.mjs$/.test(arg))) return add('no-deploy')
+
   if (['npm', 'pnpm', 'yarn', 'bun'].includes(program)) {
     const sub = args[0]
     if (sub === 'run' || sub === 'run-script') {
-      if (['deploy', 'smoke:prod'].includes(args[1])) add('no-deploy')
+      if (['deploy', 'smoke:prod', 'release'].includes(args[1])) add('no-deploy')
     }
     if (['install', 'i', 'add'].includes(sub)) {
       const packages = args.slice(1).filter((arg) => !arg.startsWith('-')).map((arg) => arg.replace(/(?!^)@[^/]*$/, ''))
@@ -446,7 +488,7 @@ function checkProgram(command, ctx, add) {
 
 // 返り値：[{ rule, message }]。空なら止めない。
 // ctx：{ branch, projectDir, cwd, scratchpadDir, shell, remoteUrl(name), prInfo(target) }
-// prInfo は { base, files, isDraft, mergeable, checks: [{ name, state }], reviewDecision, review: { verdict, sha }, headSha }
+// prInfo は { base, files, isDraft, labels, mergeable, checks: [{ name, state, notStarted? }], localVerify: { sha }?, reviewDecision, review: { verdict, sha }, headSha }
 export function checkCommand(command, ctx) {
   const findings = []
   const add = (rule, message = MESSAGES[rule]) => {

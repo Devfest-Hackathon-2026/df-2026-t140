@@ -1,0 +1,226 @@
+/* チュートリアル（Tutorial.tsx）。どの画面よりも手前に、画面全体を覆って出す */
+.layer {
+  position: fixed;
+  /* タップとスワイプは、この層（画面全体）で受ける。スワイプを、ページのスクロールや引っ張って読み込み直す動きに取られないようにする */
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;
+  inset: 0;
+  z-index: 3000;
+  display: flex;
+  justify-content: center;
+  background: var(--color-go);
+  font-family: var(--font-family);
+}
+
+/* スマホの幅の枠。広い画面では中央に寄せる（ほかの画面の枠と同じ幅） */
+.frame {
+  position: relative;
+  width: 100%;
+  max-width: 480px;
+  height: 100dvh;
+  overflow: hidden;
+  /* 背景は緑一色（アプリの「進む」の色）。画面はスマホの形の枠に入れて、この上に置く */
+  background: var(--color-go);
+  /* 枠の上から始めたスワイプも、ページのスクロールや引っ張って読み込み直す動きに取られないようにする（層と同じ） */
+  touch-action: none;
+  outline: none;
+}
+
+/*
+ * スマホの枠を置く場所。上の棒の下から、下の文言の箱の上までのあいだ。
+ * 下は、2 行の文言の箱と、最後の 1 枚の「はじめる！」が収まるだけ空けておく（文言と枠が重ならないように）
+ */
+.stage {
+  --stage-top: calc(68px + env(safe-area-inset-top));
+  --stage-bottom: calc(172px + env(safe-area-inset-bottom));
+
+  position: absolute;
+  top: var(--stage-top);
+  right: 0;
+  bottom: var(--stage-bottom);
+  left: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+/*
+ * スマホの形の枠。縦も横も画面の 7 割ほど（390×844 で、およそ 273×591）。
+ * 高さは「置く場所の高さ」「画面の高さの 7 割」「画面の幅の 7 割から決まる高さ」の、いちばん小さいものにする
+ */
+.phone {
+  flex: none;
+  box-sizing: border-box;
+  height: min(
+    calc(100dvh - var(--stage-top) - var(--stage-bottom)),
+    70dvh,
+    calc(min(100vw, 480px) * 0.7 * 844 / 390)
+  );
+  aspect-ratio: 390 / 844;
+  padding: 6px;
+  border-radius: 36px;
+  background: var(--color-toast);
+  box-shadow:
+    0 0 0 2px color-mix(in srgb, var(--color-surface) 25%, transparent),
+    0 14px 32px var(--color-overlay);
+}
+
+/* 枠の中の、実際の画面。上の帯が切れないよう、上にそろえて広げる */
+.image {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 30px;
+  background: var(--color-bg);
+  object-fit: cover;
+  object-position: top center;
+  pointer-events: none;
+  animation: fade 220ms ease-out;
+}
+
+/* 今が何枚目かを示す棒と、スキップ */
+.head {
+  position: absolute;
+  inset: 0 0 auto;
+  display: grid;
+  justify-items: end;
+  gap: var(--space-2);
+  padding: calc(var(--space-3) + env(safe-area-inset-top)) var(--space-3) 0;
+  pointer-events: none;
+}
+
+/* 枚数ぶんの棒を横に並べ、見終えた所までを白くする */
+.bars {
+  display: flex;
+  gap: var(--space-1);
+  width: 100%;
+}
+
+.bar,
+.barDone {
+  flex: 1;
+  height: 4px;
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--color-surface) 40%, transparent);
+  transition: background 160ms ease-out;
+}
+
+.barDone {
+  background: var(--color-surface);
+}
+
+/* いまの 1 枚の棒の、伸びていく部分（左から伸ばす。長さは useSlidePlayback が決める） */
+.bar {
+  overflow: hidden;
+}
+
+.barFill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--color-surface);
+  transform: scaleX(0);
+  transform-origin: left center;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  pointer-events: auto;
+}
+
+.skip {
+  min-height: 36px;
+  padding: 0 var(--space-4);
+  border: none;
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--color-toast) 40%, transparent);
+  color: var(--color-text-on-color);
+  font-size: var(--font-size-s);
+  font-weight: var(--font-weight-bold);
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+.skip:focus-visible {
+  outline: 3px solid var(--color-surface);
+  outline-offset: 2px;
+}
+
+/* 文言の箱。画面の下に固定する。ほかの画面のカードと同じ「ぷっくり」した形 */
+.caption {
+  position: absolute;
+  right: var(--space-4);
+  bottom: calc(var(--space-6) + var(--space-2) + env(safe-area-inset-bottom));
+  left: var(--space-4);
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-l);
+  background: var(--color-surface);
+  box-shadow:
+    0 var(--edge-depth) 0 var(--color-go-edge),
+    var(--shadow-float);
+  animation: pop 320ms cubic-bezier(0.2, 1.4, 0.4, 1);
+}
+
+.text {
+  color: var(--color-text);
+  font-size: 20px;
+  font-weight: var(--font-weight-heading);
+  line-height: 1.45;
+  text-align: center;
+  white-space: pre-line;
+  /* 文の途中の変な所で折り返さない（対応していないブラウザでは、ふつうに折り返す） */
+  word-break: auto-phrase;
+  text-wrap: pretty;
+}
+
+/* 最初の 1 枚にだけ出す、操作の案内 */
+.hint {
+  position: absolute;
+  bottom: calc(var(--space-1) + env(safe-area-inset-bottom));
+  left: 50%;
+  padding: 2px var(--space-3);
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--color-toast) 40%, transparent);
+  color: var(--color-text-on-color);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+  white-space: nowrap;
+  translate: -50% 0;
+  pointer-events: none;
+  animation: blink 1.4s ease-in-out infinite alternate;
+}
+
+@keyframes fade {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes pop {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.94);
+  }
+}
+
+@keyframes blink {
+  from {
+    opacity: 0.55;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .image,
+  .caption,
+  .hint {
+    animation: none;
+  }
+}

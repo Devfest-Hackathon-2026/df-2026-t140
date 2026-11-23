@@ -1,7 +1,7 @@
 import { type FormEvent, useState } from 'react'
 import { memberNameProblem, rememberMyName, updateMyProfile } from '@/entities/member'
 import { useSession } from '@/shared/api'
-import { playSound, prepareSounds } from '@/shared/lib'
+import { playSound, prepareSounds, translate as t } from '@/shared/lib'
 
 /** この旅での自分の表示名を直す入力の状態と、保存の操作。保存できたら onDone を呼ぶ */
 export function useEditMyName(tripId: string, currentName: string, onDone: () => void) {
@@ -22,7 +22,7 @@ export function useEditMyName(tripId: string, currentName: string, onDone: () =>
       onDone()
     } catch {
       playSound('error')
-      setProblem('名前を変えられませんでした。もう一度押してください。')
+      setProblem(t('名前を変えられませんでした。もう一度押してください。', 'Could not change your name. Try again.'))
     }
   }
 

@@ -1,4 +1,5 @@
-import { createContext, createElement, type ReactNode, useContext, useEffect, useState } from 'react'
+import { createContext, createElement, type ReactNode, useContext, useEffect, useState, useSyncExternalStore } from 'react'
+import { isSwitchingAccount, subscribeSwitching } from './switching'
 import { connect, type Session } from './connect'
 
 const SessionContext = createContext<Session | null>(null)
@@ -26,10 +27,13 @@ interface Props {
 /**
  * Firebase につないで匿名ログインし、下の画面に接続を渡す。
  * 見た目は持たない（つないでいる間と失敗したときに出すものは、呼ぶ側が渡す）。
+ * Google アカウントへの切り替えやログアウトで人が変わるときは、読み込み直すまで fallback を出す。
  */
 export function SessionProvider({ appName, fallback = null, renderError, children }: Props): ReactNode {
   const [session, setSession] = useState<Session>()
   const [error, setError] = useState<string>()
+  // 人を切り替えている（このあと読み込み直す）あいだは、下の画面を外して、つないでいる間と同じものを出す
+  const switching = useSyncExternalStore(subscribeSwitching, () => Boolean(session && isSwitchingAccount(session.auth)))
 
   useEffect(() => {
     let cancelled = false
@@ -46,6 +50,6 @@ export function SessionProvider({ appName, fallback = null, renderError, childre
   }, [appName])
 
   if (error) return renderError ? renderError(error) : null
-  if (!session) return fallback
+  if (!session || switching) return fallback
   return createElement(SessionContext, { value: session }, children)
 }

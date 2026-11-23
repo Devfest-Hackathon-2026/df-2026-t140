@@ -1,4 +1,5 @@
 import type { KnowledgeGraphPort, PlaceReference } from '../ports/knowledge-graph'
+import { countApiCall } from './apiUsage'
 
 // Google の Knowledge Graph Search API（https://developers.google.com/knowledge-graph ）で、場所の名前の説明を引く。
 // かめの判断を待っている（todo/humans/2026-11-08-model-kg-description.md）。キーを入れるまでは呼ばない。
@@ -59,6 +60,7 @@ export const knowledgeGraph: KnowledgeGraphPort = {
     try {
       const params = kgSearchParams(name)
       params.set('key', key)
+      await countApiCall('knowledgeGraph')
       const response = await fetch(`${ENDPOINT}?${params.toString()}`, { signal: AbortSignal.timeout(TIMEOUT_MS) })
       if (!response.ok) {
         console.warn(`Knowledge Graph Search API が ${response.status} を返しました。参考の文なしで作ります`)

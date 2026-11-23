@@ -88,6 +88,24 @@ export function describeBounds(bounds: MapBounds): string {
   )
 }
 
+/**
+ * いま見ている地域の名前。入力欄の例文を地域に合わせるのに使う（features/add-wish の hintsForArea。Takana の依頼、2026-11-22）。
+ * 日本全体を映していれば null、地方の広さなら真ん中にいちばん近い地方（「東北」）、それより寄れば真ん中の都道府県（「岩手県」）
+ */
+export function focusAreaName(bounds: MapBounds): string | null {
+  const span = bounds.east - bounds.west
+  if (span >= WIDE_LNG_SPAN) return null
+  const center = { lat: (bounds.north + bounds.south) / 2, lng: (bounds.east + bounds.west) / 2 }
+  if (span >= SPAN.region) {
+    const [nearestRegion] = [...REGIONS].sort(
+      (left, right) => Math.hypot(left[1] - center.lat, left[2] - center.lng) - Math.hypot(right[1] - center.lat, right[2] - center.lng),
+    )
+    return nearestRegion[0]
+  }
+  const prefecture = prefectureName(center)
+  return prefecture === '日本全体' ? null : prefecture
+}
+
 // ---- 都道府県・市町村・駅や名所のおよその位置の表 ----
 // 位置はこのリポジトリで書いたおよその値（AI に書かせた）。Maps から取ったものではない（Maps Platform 規約 3.2.3）。
 // 都道府県の位置は functions/src/features/suggest-places/logic/areas.ts と同じ値。

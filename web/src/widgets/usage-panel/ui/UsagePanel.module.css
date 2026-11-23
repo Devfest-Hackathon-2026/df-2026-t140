@@ -1,0 +1,101 @@
+/* API の使用量。スマホの画面（中央の 480px）の右の外側に置く。横に空きがない幅では出さない（useApiUsage の WIDE_QUERY と同じ数） */
+.panel {
+  display: none;
+}
+
+@media (min-width: 1024px) {
+  .panel {
+    position: fixed;
+    top: var(--space-4);
+    right: var(--space-4);
+    z-index: 10;
+    display: grid;
+    gap: var(--space-3);
+    /* 画面の外側の空きに収まる幅。広い画面でも 280px まで */
+    width: clamp(232px, calc((100vw - 480px) / 2 - 2 * var(--space-4)), 280px);
+    max-height: calc(100dvh - 2 * var(--space-4));
+    overflow-y: auto;
+    padding: var(--space-4);
+    border: var(--border-width) solid var(--color-border);
+    border-radius: var(--radius-l);
+    background: var(--color-surface);
+    box-shadow: var(--shadow-float);
+  }
+}
+
+.title {
+  font-size: var(--font-size-s);
+  font-weight: var(--font-weight-bold);
+}
+
+.list {
+  display: grid;
+  gap: var(--space-3);
+  padding: 0;
+  list-style: none;
+}
+
+.row {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.head {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  font-size: var(--font-size-xs);
+}
+
+.name {
+  flex: 1;
+  min-width: 0;
+}
+
+.period,
+.count {
+  flex: none;
+}
+
+.period {
+  color: var(--color-text-sub);
+}
+
+.count {
+  font-weight: var(--font-weight-bold);
+  font-variant-numeric: tabular-nums;
+}
+
+.track {
+  height: 8px;
+  overflow: hidden;
+  border-radius: var(--radius-pill);
+  background: var(--color-surface-sunken);
+}
+
+.bar {
+  height: 100%;
+  border-radius: var(--radius-pill);
+  background: var(--color-go);
+}
+
+.bar[data-tone='warn'] {
+  background: var(--color-build);
+}
+
+.bar[data-tone='full'] {
+  background: var(--color-danger);
+}
+
+.reset {
+  justify-self: end;
+  color: var(--color-text-sub);
+  font-size: var(--font-size-xs);
+  font-variant-numeric: tabular-nums;
+}
+
+.note {
+  color: var(--color-text-sub);
+  font-size: var(--font-size-xs);
+  line-height: 1.5;
+}

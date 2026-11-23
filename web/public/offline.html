@@ -12,8 +12,27 @@
   </head>
   <body>
     <main>
-      <p>インターネットにつながっていません。<br />電波のよいところで、もう一度開いてください。</p>
-      <button type="button" onclick="location.reload()">もう一度開く</button>
+      <div id="offline-ja">
+        <p>インターネットにつながっていません。<br />電波のよいところで、もう一度開いてください。</p>
+        <button type="button" onclick="location.reload()">もう一度開く</button>
+      </div>
+      <div id="offline-en" hidden>
+        <p>You’re offline.<br />Check your connection and try again.</p>
+        <button type="button" onclick="location.reload()">Try again</button>
+      </div>
     </main>
+    <script>
+      const requested = new URLSearchParams(location.search).get('lang')
+      let language = requested
+      if (!language) {
+        try { language = localStorage.getItem('app-language') } catch { /* Use Japanese when storage is unavailable. */ }
+      }
+      if (language === 'en') {
+        document.documentElement.lang = 'en'
+        document.title = 'Tabimusubi'
+        document.getElementById('offline-ja').hidden = true
+        document.getElementById('offline-en').hidden = false
+      }
+    </script>
   </body>
 </html>

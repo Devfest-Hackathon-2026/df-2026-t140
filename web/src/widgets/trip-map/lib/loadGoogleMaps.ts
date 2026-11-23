@@ -1,3 +1,4 @@
+import { appLanguage, translate } from '@/shared/lib'
 // Maps JavaScript API を読み込む。読み込むのは 1 回だけ。
 //
 // 使うのは地図の表示（maps）とマーカー（marker）だけ。Places、Routes、3D 地図、オートコンプリート、
@@ -21,14 +22,14 @@ let loading: Promise<typeof google.maps> | undefined
 
 export function loadGoogleMaps(apiKey: string): Promise<typeof google.maps> {
   loading ??= new Promise((resolve, reject) => {
-    const timer = setTimeout(() => reject(new Error('地図の読み込みに時間がかかりすぎました')), TIMEOUT_MS)
+    const timer = setTimeout(() => reject(new Error(translate('地図の読み込みに時間がかかりすぎました', "Loading the map took too long."))), TIMEOUT_MS)
     window[CALLBACK] = () => {
       clearTimeout(timer)
       resolve(google.maps)
     }
     window.gm_authFailure = () => {
       clearTimeout(timer)
-      reject(new Error('地図のキーが使えません'))
+      reject(new Error(translate('地図のキーが使えません', "The map key is not available.")))
       authFailureListeners.forEach((listener) => listener())
     }
 
@@ -37,7 +38,7 @@ export function loadGoogleMaps(apiKey: string): Promise<typeof google.maps> {
       v: 'quarterly',
       loading: 'async',
       libraries: 'maps,marker',
-      language: 'ja',
+      language: appLanguage,
       region: 'JP',
       callback: CALLBACK,
     })
@@ -46,7 +47,7 @@ export function loadGoogleMaps(apiKey: string): Promise<typeof google.maps> {
     script.async = true
     script.onerror = () => {
       clearTimeout(timer)
-      reject(new Error('地図を読み込めませんでした'))
+      reject(new Error(translate('地図を読み込めませんでした', "Couldn't load the map.")))
     }
     document.head.append(script)
   })

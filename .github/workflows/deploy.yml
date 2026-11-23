@@ -1,7 +1,7 @@
 name: Deploy
 
 # 本番へ出すのは、人が main を deploy ブランチへ反映したときだけ。main への merge では出ない
-# （かめの決定：todo/humans/2026-11-07-deploy-branch.md。main の確認は ci.yml の verify が行う）。
+# （かめの決定：todo/humans/2026-11-07-deploy-branch.md。main への merge では CI を走らせず、ここの verify がまとめて確かめる。2026-11-22）。
 # 反映の手順は docs/process/setup.md の「本番への反映」。AI は deploy へ push しない（ガードの no-push-deploy）
 on:
   push:
@@ -21,7 +21,7 @@ jobs:
   deploy:
     # deploy ブランチ以外からは出さない（Workload Identity の条件も deploy からの実行に合わせる。scripts/setup-cicd.sh）
     if: github.ref == 'refs/heads/deploy'
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
     env:
       # ブラウザ用の Maps キー。リファラと API を制限してある。リポジトリには置かない
       VITE_GOOGLE_MAPS_API_KEY: ${{ secrets.GOOGLE_MAPS_API_KEY }}
@@ -57,6 +57,8 @@ jobs:
           PLACES_PHOTOS: ${{ vars.PLACES_PHOTOS }}
           # 模型の見た目の参考（Knowledge Graph Search API）。空なら参考なしで作る（todo/humans/2026-11-08-model-kg-description.md）
           KG_API_KEY: ${{ secrets.KG_API_KEY }}
+          # 飛行機の時刻表（公共交通オープンデータセンター、ANA・JAL）。空なら距離の式の目安（todo/humans/2026-11-18-odpt-flight-timetable.md）
+          ODPT_CONSUMER_KEY: ${{ secrets.ODPT_CONSUMER_KEY }}
       # サービスアカウントキーを発行せず、Workload Identity 連携で認証する
       - uses: google-github-actions/auth@v3
         with:

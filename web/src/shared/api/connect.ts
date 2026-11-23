@@ -3,6 +3,7 @@ import { type Auth, connectAuthEmulator, getAuth, signInAnonymously } from 'fire
 import { connectFirestoreEmulator, type Firestore, getFirestore, terminate } from 'firebase/firestore'
 import { connectFunctionsEmulator, type Functions, getFunctions } from 'firebase/functions'
 import { simFrame } from '../lib/simFrame'
+import { finishGoogleRedirect } from './account'
 
 const REGION = 'asia-northeast1'
 
@@ -16,7 +17,18 @@ const LOCAL_HOST =
 export const isLocal = LOCAL_HOST.test(location.hostname)
 
 /**
- * 匿名ログイン済みの接続。データを読み書きする処理は、必ずこれを引数で受け取る
+ * 2 組目の Emulator（npm run dev:alt）は、ポートを全部 10000 ずらして立てる（同じ Mac で CI のランナーの Emulator とぶつからないように）。
+ * 手元の確認（npm run verify:local）は 10000 か 20000 ずらす。画面もずらしたポート（15173、15002、25002）で開くので、
+ * 開いたポートの 1 万の位で、つなぐ Emulator のずれを決める（scripts/dev-alt.mjs、scripts/harness/lib/verify-local.mjs）
+ */
+const EMULATOR_PORT_OFFSET = import.meta.env.VITE_EMULATOR_PORT_OFFSET
+  ? // 本物の地図で撮るとき（Maps のキーが許すのは 5173）は、5173 で開いた画面をずらした Emulator につなぐ。
+    // 起動のときに VITE_EMULATOR_PORT_OFFSET=10000 を付ける（ビルドには付けないので、本番は変わらない）
+    Number(import.meta.env.VITE_EMULATOR_PORT_OFFSET)
+  : Math.floor(Number(location.port) / 10000) * 10000
+
+/**
+ * ログイン済みの接続。データを読み書きする処理は、必ずこれを引数で受け取る
  * （画面ごとに別の人として動かせるようにするため。複数人シミュレーションで使う）。
  */
 export interface Session {
@@ -24,7 +36,10 @@ export interface Session {
   auth: Auth
   db: Firestore
   functions: Functions
-  /** 匿名ログインした人。端末（ブラウザ）ごと、アプリ名ごとに別の人になる */
+  /**
+   * ログインしている人。匿名ログインなら、端末（ブラウザ）ごと、アプリ名ごとに別の人になる。
+   * Google アカウントと連携した人は、どの端末でも同じ人になる（account.ts）
+   */
   uid: string
 }
 
@@ -38,8 +53,17 @@ function loadConfig(): Promise<FirebaseOptions> {
   return config
 }
 
+/**
+ * ログインの画面（/__/auth/…）を、アプリと同じドメインで開く。別のドメインだと、ブラウザが
+ * ドメインをまたぐ保存を止めるので、画面ごと移るログイン（ホーム画面に置いたアプリの中）が戻ってこられない。
+ * Firebase Hosting は、どのドメインでも /__/auth/ を出す。手元は Emulator のログイン画面を使うので変えない
+ */
+function withOwnAuthDomain(options: FirebaseOptions): FirebaseOptions {
+  return isLocal ? options : { ...options, authDomain: location.host }
+}
+
 async function open(appName?: string): Promise<Session> {
-  const app = initializeApp(await loadConfig(), appName)
+  const app = initializeApp(withOwnAuthDomain(await loadConfig()), appName)
   const auth = getAuth(app)
   const db = getFirestore(app)
   const functions = getFunctions(app, REGION)
@@ -49,9 +73,9 @@ async function open(appName?: string): Promise<Session> {
     // ブラウザは *.localhost を自分自身にする）。Emulator は HTTP/1.1 で、ブラウザは同じホストに 6 本までしか
     // つながないので、3 つの画面が同じホスト名で Firestore を購読すると、書き込みが待たされて進まなくなる
     const host = simFrame ? `${simFrame.appName}.localhost` : location.hostname
-    connectAuthEmulator(auth, `http://${host}:9099`, { disableWarnings: true })
-    connectFirestoreEmulator(db, host, 8080)
-    connectFunctionsEmulator(functions, host, 5001)
+    connectAuthEmulator(auth, `http://${host}:${9099 + EMULATOR_PORT_OFFSET}`, { disableWarnings: true })
+    connectFirestoreEmulator(db, host, 8080 + EMULATOR_PORT_OFFSET)
+    connectFunctionsEmulator(functions, host, 5001 + EMULATOR_PORT_OFFSET)
   }
 
   // ページを離れるときに、Firestore の接続を閉じる。ブラウザは「戻る」に備えて前のページを
@@ -73,6 +97,8 @@ async function open(appName?: string): Promise<Session> {
 
   // 前に開いたときのログインが残っていれば、同じ人として続ける
   await auth.authStateReady()
+  // Google のログインの画面から戻ってきたところなら、連携の続きを先に終える（人が変わることがある）
+  await finishGoogleRedirect(auth, functions)
   const user = auth.currentUser ?? (await signInAnonymously(auth)).user
 
   return { app, auth, db, functions, uid: user.uid }
@@ -81,7 +107,7 @@ async function open(appName?: string): Promise<Session> {
 const sessions = new Map<string, Promise<Session>>()
 
 /**
- * Firebase につなぎ、匿名ログインする。同じ appName なら同じ接続を返す
+ * Firebase につなぎ、ログインする（前のログインがなければ匿名ログイン）。同じ appName なら同じ接続を返す
  * （開発時の React StrictMode でも 1 回だけログインする）。
  * appName を変えると、同じブラウザの中でも別の匿名ユーザーになる。
  */

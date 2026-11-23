@@ -11,6 +11,8 @@ interface DragView {
 
 /** 取っ手に付けるクラス。指で触れる範囲を見た目より広げ、ブラウザのスクロールを止める */
 export const sheetGripClass = styles.grip
+/** 取っ手から見出しの行までをまとめた、つかめる範囲に付けるクラス（ドラッグの部品はここに付ける） */
+export const sheetGripZoneClass = styles.zone
 /** 閉じた形のシート全体に付けるクラス（つかんで上へドラッグできる） */
 export const sheetPeekGripClass = styles.peekGrip
 

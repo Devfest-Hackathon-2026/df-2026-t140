@@ -1,3 +1,4 @@
+import { translate as t } from '@/shared/lib'
 import { useState } from 'react'
 import { Button } from '@/shared/ui'
 import { useLeaveTrip } from '../model/useLeaveTrip'
@@ -17,18 +18,18 @@ export function LeaveTripButton({ tripId, onLeaving }: Props) {
   if (!confirming) {
     return (
       <Button sound="attention" variant="danger" onClick={() => setConfirming(true)}>
-        この旅から抜ける
+        {t('この旅から抜ける', 'Leave this trip')}
       </Button>
     )
   }
 
   return (
     <div className={styles.confirm}>
-      <p>抜けると、この旅は一覧から消えます。招待リンクから、もう一度参加できます。</p>
+      <p>{t('抜けると、この旅は一覧から消えます。招待リンクから、もう一度参加できます。', 'Leaving removes this trip from your list. You can rejoin using the invite link.')}</p>
       <div className={styles.buttons}>
-        <Button sound="close" onClick={() => setConfirming(false)}>やめる</Button>
+        <Button sound="close" onClick={() => setConfirming(false)}>{t('やめる', 'Cancel')}</Button>
         <Button variant="danger" onClick={() => void leave()}>
-          抜ける
+          {t('抜ける', 'Leave trip')}
         </Button>
       </div>
     </div>

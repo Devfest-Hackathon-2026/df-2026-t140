@@ -106,3 +106,15 @@
     flex-basis: 100%;
   }
 }
+
+/* 決まったしおりの絵の地（しおりの色。計画中の旅の地図の絵と見分ける） */
+.finalTile {
+  background: var(--color-route-soft);
+  color: var(--color-route-edge);
+}
+
+/* 過去の旅（最終日を過ぎた旅）。落ち着いた灰色にして、これからの旅と見分ける */
+.pastTile {
+  background: var(--color-surface-sunken);
+  color: var(--color-text-sub);
+}

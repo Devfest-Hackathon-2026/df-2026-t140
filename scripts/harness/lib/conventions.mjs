@@ -11,6 +11,11 @@ const MAX_BRANCH_LENGTH = 60
 export const isProtectedBranch = (name) => PROTECTED_BRANCHES.includes(name)
 // 本番へ出すブランチ。人が main から反映したときだけ Deploy が走る（かめの決定：todo/humans/2026-11-07-deploy-branch.md）。
 // AI は push も commit も merge もしない
+// 作業中の PR の目印。Free の Organization の private リポジトリでは Draft PR が使えないので、ラベルで表す
+// （リポジトリを Organization へ移したため。かめと会話で合意、2026-11-18）
+export const WIP_LABEL = '作業中'
+export const isWipPr = (pr) => Boolean(pr?.isDraft) || (pr?.labels ?? []).some((label) => (label?.name ?? label) === WIP_LABEL)
+
 export const DEPLOY_BRANCH = 'deploy'
 export const isDeployBranch = (name) => name === DEPLOY_BRANCH
 

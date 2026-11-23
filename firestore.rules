@@ -44,6 +44,52 @@ service cloud.firestore {
         && data.origin is string && data.origin.size() >= 1 && data.origin.size() <= 40;
     }
 
+    // 大まかな場所（地方）。作るときだけ書ける（あとから変えられるかは決めていない。企画書「決めていないこと」）。
+    // 前からある画面（地方を選ぶ前の版）でも作れるように、なくてもよい。ID は web/src/entities/trip/model/regions.ts と合わせる
+    function validRegions(data) {
+      return !('regions' in data) || (data.regions is list
+        && data.regions.size() >= 1 && data.regions.size() <= 11
+        && data.regions.toSet().size() == data.regions.size()
+        && data.regions.hasOnly(['hokkaido', 'tohoku', 'kanto', 'koshinetsu', 'hokuriku', 'tokai', 'kinki', 'chugoku', 'shikoku', 'kyushu', 'okinawa']));
+    }
+
+    // 県まで絞ったときだけの、選んだ県の名前。地方と同じく作るときだけ書ける。web/src/entities/trip/model/regions.ts と合わせる
+    function validPrefectures(data) {
+      return !('prefectures' in data) || (data.prefectures is list
+        && data.prefectures.size() >= 1 && data.prefectures.size() <= 47
+        && data.prefectures.toSet().size() == data.prefectures.size()
+        && data.prefectures.hasOnly(['北海道', '青森県', '岩手県', '宮城県', '秋田県', '山形県', '福島県', '茨城県', '栃木県', '群馬県', '埼玉県', '千葉県', '東京都', '神奈川県', '新潟県', '富山県', '石川県', '福井県', '山梨県', '長野県', '岐阜県', '静岡県', '愛知県', '三重県', '滋賀県', '京都府', '大阪府', '兵庫県', '奈良県', '和歌山県', '鳥取県', '島根県', '岡山県', '広島県', '山口県', '徳島県', '香川県', '愛媛県', '高知県', '福岡県', '佐賀県', '長崎県', '熊本県', '大分県', '宮崎県', '鹿児島県', '沖縄県']));
+    }
+
+    function validOriginPoint(data) {
+      return !('originPoint' in data) || (data.originPoint is map
+        && data.originPoint.keys().hasOnly(['name', 'location', 'placeId'])
+        && data.originPoint.keys().hasAll(['name', 'location', 'placeId'])
+        && data.originPoint.name == data.origin
+        && data.originPoint.location is map
+        && data.originPoint.location.keys().hasOnly(['lat', 'lng'])
+        && data.originPoint.location.lat is number && data.originPoint.location.lat >= -90 && data.originPoint.location.lat <= 90
+        && data.originPoint.location.lng is number && data.originPoint.location.lng >= -180 && data.originPoint.location.lng <= 180
+        && (data.originPoint.placeId == null || (data.originPoint.placeId is string && data.originPoint.placeId.size() <= 300)));
+    }
+
+    // 旅の最後にいたい場所（帰る場所）。出発地と違うときだけ、作るときに書ける（Takana の依頼、2026-11-22）。
+    // 名前と位置はそろえて書く。位置の形は出発地（validOriginPoint）と同じ
+    function validReturnPoint(data) {
+      return (!('returnTo' in data) && !('returnPoint' in data)) || (data.returnTo is string
+        && data.returnTo.size() >= 1 && data.returnTo.size() <= 40
+        && data.returnTo != data.origin
+        && data.returnPoint is map
+        && data.returnPoint.keys().hasOnly(['name', 'location', 'placeId'])
+        && data.returnPoint.keys().hasAll(['name', 'location', 'placeId'])
+        && data.returnPoint.name == data.returnTo
+        && data.returnPoint.location is map
+        && data.returnPoint.location.keys().hasOnly(['lat', 'lng'])
+        && data.returnPoint.location.lat is number && data.returnPoint.location.lat >= -90 && data.returnPoint.location.lat <= 90
+        && data.returnPoint.location.lng is number && data.returnPoint.location.lng >= -180 && data.returnPoint.location.lng <= 180
+        && (data.returnPoint.placeId == null || (data.returnPoint.placeId is string && data.returnPoint.placeId.size() <= 300)));
+    }
+
     function validMemberProfile(data) {
       return data.displayName is string && data.displayName.size() >= 1 && data.displayName.size() <= 20
         && data.color is string && data.color.matches('^#[0-9a-fA-F]{6}$');
@@ -56,6 +102,11 @@ service cloud.firestore {
         && bounds.south is number && bounds.south >= -90 && bounds.south <= 90
         && bounds.east is number && bounds.east >= -180 && bounds.east <= 180
         && bounds.west is number && bounds.west >= -180 && bounds.west <= 180;
+    }
+
+    // 旅程が確定しているか（features/confirm-shiori）。確定しているあいだは、行きたいことを足せず、旅の名前と日程も変えられない
+    function isConfirmed(tripId) {
+      return 'confirmed' in get(tripPath(tripId)).data;
     }
 
     function isPlanning(tripId) {
@@ -85,10 +136,16 @@ service cloud.firestore {
       // 作る人は、同じ書き込みで自分をメンバーに入れる
       allow create: if signedIn()
         && request.resource.data.keys().hasOnly(
-          ['title', 'startDate', 'endDate', 'origin', 'status', 'decidedRouteId', 'createdBy', 'createdAt', 'updatedAt'])
+          ['title', 'startDate', 'endDate', 'origin', 'originPoint', 'returnTo', 'returnPoint', 'regions', 'prefectures', 'travelMode', 'status', 'decidedRouteId', 'createdBy', 'createdAt', 'updatedAt'])
         && request.resource.data.keys().hasAll(
           ['title', 'startDate', 'endDate', 'origin', 'status', 'decidedRouteId', 'createdBy', 'createdAt', 'updatedAt'])
         && validTripInfo(request.resource.data)
+        && validOriginPoint(request.resource.data)
+        && validReturnPoint(request.resource.data)
+        && validRegions(request.resource.data)
+        && validPrefectures(request.resource.data)
+        // 移動手段（車、電車・バス、飛行機）。選び直すのは Functions だけ（features/change-travel-mode。しおりの時刻を一緒に計算し直すため）
+        && (!('travelMode' in request.resource.data) || request.resource.data.travelMode in ['car', 'transit', 'plane'])
         && request.resource.data.status == 'planning'
         && request.resource.data.decidedRouteId == null
         && request.resource.data.createdBy == request.auth.uid
@@ -96,10 +153,13 @@ service cloud.firestore {
         && request.resource.data.updatedAt == request.time
         && existsAfter(memberPath(tripId, request.auth.uid));
 
-      // メンバーなら誰でも基本情報を直せる（幹事だけにしない）。状態と決定したルートは Functions だけ
+      // メンバーなら誰でも旅の名前を直せる（幹事だけにしない）。日程は発案者だけが Functions（change-trip-dates）で変える
+      // （しおりの組み直しと一緒に行うため。2026-11-22）。状態と決定したルート、旅程の確定（confirmed）も Functions だけ。
+      // 旅程が確定しているあいだは直せない
       allow update: if isMember(tripId)
+        && !('confirmed' in resource.data)
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(
-          ['title', 'startDate', 'endDate', 'origin', 'updatedAt'])
+          ['title', 'updatedAt'])
         && validTripInfo(request.resource.data)
         && request.resource.data.updatedAt == request.time;
 
@@ -135,8 +195,15 @@ service cloud.firestore {
       match /wishes/{wishId} {
         allow read: if isMember(tripId);
         allow create: if isMember(tripId)
-          && request.resource.data.keys().hasOnly(['uid', 'text', 'bounds', 'status', 'createdAt'])
+          && !isConfirmed(tripId)
+          // lodgingNight は、しおりの「宿を探す」から書いた希望にだけある（何日目の夜の宿か。整数かどうかは Functions が見る。domain/wish.ts）
+          // mealSlot は、しおりのごはんの枠の「お店を探す」から書いた希望にだけある（「1-lunch」の形。domain/meal.ts）
+          && request.resource.data.keys().hasOnly(['uid', 'text', 'bounds', 'status', 'createdAt', 'lodgingNight', 'mealSlot'])
           && request.resource.data.keys().hasAll(['uid', 'text', 'bounds', 'status', 'createdAt'])
+          && (!('lodgingNight' in request.resource.data)
+            || (request.resource.data.lodgingNight is number && request.resource.data.lodgingNight >= 1 && request.resource.data.lodgingNight <= 30))
+          && (!('mealSlot' in request.resource.data)
+            || (request.resource.data.mealSlot is string && request.resource.data.mealSlot.matches('^([1-9]|[12][0-9]|3[01])-(breakfast|lunch|dinner)$')))
           && request.resource.data.uid == request.auth.uid
           && request.resource.data.text is string
           && request.resource.data.text.size() >= 1
@@ -182,7 +249,8 @@ service cloud.firestore {
       }
     }
 
-    // 合言葉を通した人の記録。書くのは Functions（features/unlock-ai）だけ。本人だけが読める（画面で「本物の AI が使える」と出す）
+    // 合言葉を通した人の記録。書くのは Functions だけ（features/unlock-ai が合言葉を通したとき、features/move-memberships が
+    // Google アカウントへの引き継ぎで前の自分の記録を写すとき）。本人だけが読める（画面で「本物の AI が使える」と出す）
     match /aiAccess/{uid} {
       allow get: if signedIn() && request.auth.uid == uid;
     }

@@ -1,0 +1,1 @@
+export { removeBuilding } from './handler'

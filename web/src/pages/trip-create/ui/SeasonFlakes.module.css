@@ -1,0 +1,66 @@
+/* 地図の上に重ねる、舞う紅葉・雪・桜。地図の操作のじゃまをしない */
+.flakes {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.fall {
+  position: absolute;
+  top: -6%;
+  animation: fall linear infinite;
+}
+
+.flake {
+  display: block;
+  animation: sway ease-in-out infinite alternate;
+}
+
+.flake_winter {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 0 4px rgb(255 255 255 / 90%);
+}
+
+.flake_spring {
+  width: 9px;
+  height: 7px;
+  border-radius: 9px 0;
+  background: #f7a9c4;
+}
+
+.flake_autumn {
+  width: 10px;
+  height: 10px;
+  clip-path: polygon(50% 0, 62% 32%, 96% 22%, 72% 52%, 90% 86%, 54% 70%, 50% 100%, 46% 70%, 10% 86%, 28% 52%, 4% 22%, 38% 32%);
+}
+
+@keyframes fall {
+  from {
+    top: -6%;
+  }
+
+  to {
+    top: 104%;
+  }
+}
+
+@keyframes sway {
+  from {
+    transform: translateX(-14px) rotate(-30deg);
+  }
+
+  to {
+    transform: translateX(14px) rotate(40deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .flakes {
+    display: none;
+  }
+}

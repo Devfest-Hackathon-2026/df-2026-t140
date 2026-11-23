@@ -13,6 +13,8 @@ interface Props {
   anchored?: boolean
   /** 模型を上から見て反時計回りに回す角度（度）。渡さなければ 0 */
   yaw?: number
+  /** false なら、模型の下の影を描かない（地面から浮かせて出すとき）。渡さなければ描く */
+  shadow?: boolean
   className?: string
 }
 
@@ -20,8 +22,8 @@ interface Props {
  * 模型を、斜め上から見た絵として出す（three.js で 1 回だけ描いて、画像にする）。
  * WebGL が使えない環境では何も出さない（呼ぶ側の名札だけが残る）。
  */
-export function ModelSprite({ model, size, anchored = false, yaw = 0, className }: Props) {
-  const url = useMemo(() => renderModelSprite(model, yaw), [model, yaw])
+export function ModelSprite({ model, size, anchored = false, yaw = 0, shadow = true, className }: Props) {
+  const url = useMemo(() => renderModelSprite(model, yaw, shadow), [model, yaw, shadow])
   if (!url) return null
   const style = anchored
     ? {

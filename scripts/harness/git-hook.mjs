@@ -108,7 +108,7 @@ function prePush() {
         const known = git(['cat-file', '-e', `${remoteSha}^{commit}`], { cwd: root }).ok
         if (!known) problems.push(`${name} の今の中身が手元にありません。\`git fetch origin\` してから反映し直します`)
         else if (!git(['merge-base', '--is-ancestor', remoteSha, localSha], { cwd: root }).ok) {
-          problems.push(`${name} への force push（履歴の書き換え）はしません。main を早送りで反映します（\`git push origin origin/main:${name}\`）`)
+          problems.push(`${name} への force push（履歴の書き換え）はしません。main の反映は \`npm run release\` で行います（main を merge した commit を足します）`)
         }
       }
       continue

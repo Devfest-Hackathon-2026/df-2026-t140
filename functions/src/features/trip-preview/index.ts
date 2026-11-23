@@ -1,0 +1,1 @@
+export { previewTrip } from './handler'

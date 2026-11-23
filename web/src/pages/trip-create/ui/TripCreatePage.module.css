@@ -1,19 +1,50 @@
+/* 画面いっぱいの地図の上に、上の帯と下のシートを浮かせる（ページの枠と同じく幅 480px まで） */
+.page {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  max-width: 480px;
+  margin: 0 auto;
+  overflow: hidden;
+  background: var(--color-map-water);
+}
+
 .top {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 3;
+  transition: opacity 300ms ease;
 }
 
-.hero {
-  display: grid;
-  gap: var(--space-2);
+/* 最後の問いで「ここへ出発！」を押したあと：上の帯は消える（下のシートは ui/QuizSheet が下へ抜く） */
+.topDeparting {
+  opacity: 0;
 }
 
-.title {
-  /* 幅 320px で「う。」だけが次の行に落ちないよう、狭い幅では少し小さくする（320px で 23px、384px 以上で 28px） */
-  font-size: clamp(23px, 7.3vw, var(--font-size-xl));
+/* 旅を作るのを待っているあいだの知らせ。地図が寄り終わるころに出す（すぐ作れたときは、出る前に旅の画面へ移る） */
+.making {
+  position: absolute;
+  left: 50%;
+  bottom: calc(var(--space-6) + env(safe-area-inset-bottom));
+  z-index: 4;
+  margin: 0;
+  padding: var(--space-2) var(--space-4);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: 999px;
+  background: var(--color-surface);
+  box-shadow: var(--shadow-float);
+  font-size: var(--font-size-s);
+  font-weight: var(--font-weight-bold);
+  white-space: nowrap;
+  transform: translateX(-50%);
+  opacity: 0;
+  animation: making-in 300ms ease 1300ms forwards;
 }
 
-.lead {
-  color: var(--color-text-sub);
+@keyframes making-in {
+  to {
+    opacity: 1;
+  }
 }

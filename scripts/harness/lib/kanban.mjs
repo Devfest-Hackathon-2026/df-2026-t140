@@ -1,15 +1,14 @@
-// GitHub Projects のカンバン（Project #1「Konbu_DevFest」）と、人の判断（todo/humans/）をつなぐ。
-// 人の判断を書いたら、止まっている Issue を Status「人間待ち」に動かし、決まったら「In Progress」に戻す。
-// カンバンは補助で、正本は todo/humans/。gh がない・オフライン・project スコープがないときは警告だけ出し、
-// 呼び出し側の todo/humans の読み書きは止めない。
+// GitHub Projects のカンバン（Project #1「Konbu_DevFest」）と Issue を gh で操作する部分。
+// どの列に置くかは lib/board.mjs が一次の記録から決め、動かすのは GitHub Actions（kanban-sync.mjs）だけにする
+// （かめの決定、2026-11-16。各自の gh に project の権限が要らないように）。
+// gh がない・オフライン・権限がないときは警告を返し、例外は投げない。
 // gh は注入する（テストでは本物を叩かない）。列やフィールドの id は直書きせず、名前で引く。
 
 export const KANBAN = {
   owner: 'Lazyturtle0852',
   number: 1,
   statusField: 'Status',
-  columns: { waiting: '人間待ち', inProgress: 'In Progress', done: 'Done' },
-  label: { name: '人間待ち', color: 'd93f0b', description: '人の判断・作業を待っている（todo/humans/）' },
+  columns: { todo: 'Todo', inProgress: 'In Progress', waiting: '人間待ち', done: 'Done' },
 }
 
 export const SCOPE_HINT = 'gh auth refresh -h github.com -s project'
@@ -77,11 +76,6 @@ export function parseProjectItems(json) {
 
 export const itemsInColumn = (items, column) => items.filter((item) => item.status === column)
 
-/** ref（Issue 番号）を、except 以外の open な人の判断がまだ止めているか */
-export function stillBlocked(ref, openTodos, exceptPath) {
-  return openTodos.some((todo) => todo.path !== exceptPath && parseBlockRefs(todo.blocks).includes(ref))
-}
-
 export function humanIssueTitle(title) {
   return `人間待ち：${title}`
 }
@@ -90,7 +84,7 @@ export function renderHumanIssueBody({ title, kind, path, fileUrl }) {
   return `人にしかできない判断・作業です（kind：${kind}）。AI は決めず、実行もしません。
 
 - 決めてほしいことと背景：[${path}](${fileUrl})
-- 決めたら：\`npm run human -- done ${path.replace(/^.*\//, '').replace(/\.md$/, '')} --decision "…" --by <決めた人> --reason "…"\`（この Issue は閉じ、カンバンも動きます）
+- 決めたら：AI に伝えるか、\`npm run human -- done ${path.replace(/^.*\//, '').replace(/\.md$/, '')} --decision "…" --by <決めた人> --reason "…"\`（GitHub Actions がこの Issue を閉じ、カンバンも動かします）
 
 # ${title}
 
@@ -176,10 +170,8 @@ export function createKanban({ gh, config = KANBAN }) {
   function createHumanIssue({ title, kind, path }) {
     const target = repo()
     if (!target.ok) return target
-    const label = config.label
-    call(['label', 'create', label.name, '--color', label.color, '--description', label.description, '--force'])
     const fileUrl = `${target.url}/blob/main/${path}`
-    const created = call(['issue', 'create', '--title', humanIssueTitle(title), '--body', renderHumanIssueBody({ title, kind, path, fileUrl }), '--label', label.name])
+    const created = call(['issue', 'create', '--title', humanIssueTitle(title), '--body', renderHumanIssueBody({ title, kind, path, fileUrl })])
     if (!created.ok) return created
     const number = Number(created.stdout.trim().match(/\/issues\/(\d+)/)?.[1])
     if (!number) return { ok: false, warning: `起票した Issue の番号を読めませんでした（${created.stdout.trim()}）` }
@@ -191,76 +183,12 @@ export function createKanban({ gh, config = KANBAN }) {
     return result.ok ? { ok: true, number } : result
   }
 
-  /** column の列にある項目。読めなければ ok: false と warning */
-  function listColumn(column) {
-    const result = json(['project', 'item-list', ...projectArgs, '--limit', '300'])
+  /** カンバンのすべての項目。読めなければ ok: false と warning */
+  function listItems() {
+    const result = json(['project', 'item-list', ...projectArgs, '--limit', '500'])
     if (!result.ok) return { ...result, items: [] }
-    return { ok: true, items: itemsInColumn(parseProjectItems(result.value), column) }
+    return { ok: true, items: parseProjectItems(result.value) }
   }
 
-  return { moveToColumn, createHumanIssue, closeIssue, listColumn, config }
+  return { moveToColumn, createHumanIssue, closeIssue, listItems, config }
 }
-
-// ---- 人の判断とカンバンをつなぐ手順 -----------------------------------------------
-
-/**
- * open な人の判断をカンバンに載せる。blocks に「#N」があればその Issue を「人間待ち」に、
- * なければ人の作業を Issue として起票して「人間待ち」に置く（issue 欄がもうあれば起票しない）。
- * 戻り値の issue は、新しく起票したときだけ入る（呼び出し側が issue 欄に書き戻す）。
- */
-export function linkHumanTodo({ todo, kanban }) {
-  const { waiting } = kanban.config.columns
-  const notes = []
-  const warnings = []
-  const refs = parseBlockRefs(todo.blocks)
-  let issue
-  const own = parseIssueRef(todo.issue)
-  const targets = refs.length > 0 ? refs : own ? [own] : []
-  if (refs.length === 0 && !own) {
-    const created = kanban.createHumanIssue({ title: todo.title, kind: todo.kind, path: todo.path })
-    if (created.ok) {
-      issue = created.number
-      targets.push(created.number)
-      notes.push(`人の作業を Issue #${created.number} として起票しました：${created.url}`)
-    } else {
-      warnings.push(created.warning)
-    }
-  }
-  for (const number of targets) {
-    const moved = kanban.moveToColumn(number, waiting)
-    if (moved.ok) notes.push(`#${number} をカンバンの「${waiting}」に置きました`)
-    else warnings.push(moved.warning)
-  }
-  return { issue, notes, warnings: unique(warnings) }
-}
-
-/**
- * done にした人の判断を、カンバンから外す。待っていた Issue は「In Progress」に戻す
- * （ほかの open な人の判断がまだ止めているなら戻さない）。人の作業の Issue は Done にして閉じる。
- */
-export function releaseHumanTodo({ todo, openTodos = [], kanban }) {
-  const { inProgress, done } = kanban.config.columns
-  const notes = []
-  const warnings = []
-  for (const number of parseBlockRefs(todo.blocks)) {
-    if (stillBlocked(number, openTodos, todo.path)) {
-      notes.push(`#${number} は、ほかの人の判断もまだ待っているので「${kanban.config.columns.waiting}」のままにします`)
-      continue
-    }
-    const moved = kanban.moveToColumn(number, inProgress)
-    if (moved.ok) notes.push(`#${number} をカンバンの「${inProgress}」に戻しました`)
-    else warnings.push(moved.warning)
-  }
-  const own = parseIssueRef(todo.issue)
-  if (own) {
-    const moved = kanban.moveToColumn(own, done)
-    if (!moved.ok) warnings.push(moved.warning)
-    const decided = [todo.decision, todo.decidedBy && `（${todo.decidedBy}、${todo.decidedAt}）`].filter(Boolean).join('')
-    const closed = kanban.closeIssue(own, `決まりました：${decided || 'todo/humans を参照'}\n\n${todo.path}`)
-    if (closed.ok) notes.push(`人の作業の Issue #${own} を閉じました`)
-    else warnings.push(closed.warning)
-  }
-  return { notes, warnings: unique(warnings) }
-}
-
-const unique = (list) => [...new Set(list.filter(Boolean))]

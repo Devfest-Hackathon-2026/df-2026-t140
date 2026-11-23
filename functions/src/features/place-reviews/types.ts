@@ -1,9 +1,11 @@
-import type { PlaceReviews } from '../../ports/places-api'
+import type { PlaceReviews, ReviewsLanguage } from '../../ports/places-api'
 
 export interface PlaceReviewsInput {
   tripId: string
   pinId: string
   uid: string
+  /** 開いた人の表示言語。口コミをこの言語で聞く（指定なしは 'ja'） */
+  language?: ReviewsLanguage
 }
 
 /**

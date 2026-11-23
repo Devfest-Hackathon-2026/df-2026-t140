@@ -100,13 +100,16 @@
   cursor: grab;
 }
 
-/* 上の横棒（取っ手）。押すと閉じる・開く。見た目は小さいので、押せる範囲は横いっぱいにする */
+/*
+ * 上の横棒（取っ手）。押すと閉じる・開く。見た目は小さいので、押せる範囲は、カードの左右の余白も含めて横いっぱいにする
+ * （ほかの下のシートの取っ手と同じ。Takana の依頼、2026-11-22）
+ */
 .grip {
   display: grid;
   place-items: center;
-  width: 100%;
+  width: auto;
   min-height: 24px;
-  margin: calc(-1 * var(--space-2)) 0 calc(-1 * var(--space-2));
+  margin: calc(-1 * var(--space-2)) calc(-1 * var(--space-4)) calc(-1 * var(--space-2));
   padding: 0;
   border: none;
   background: none;
@@ -138,6 +141,94 @@
   background: var(--color-go-soft);
   color: var(--color-go-edge);
   overflow: hidden;
+}
+
+/*
+ * 建った建物のカード。模型を右側に大きく出し、文は左に寄せる。
+ * 上の部分（.top）は箱を作らず（display: contents）、取っ手は横いっぱい、名前の行と説明（.fold）は左の列に置く。
+ * 模型は、名前の行から説明までの 2 行にまたがる正方形。一番下の操作（.below）は横いっぱい
+ */
+.showcase {
+  /*
+   * 模型の欄の一辺は、カードの中身の幅の 44%。列は % で決め、欄の高さは同じ大きさを cqi（カードの中身の幅の 1%）で書く。
+   * cqi はカードの中の要素でだけ、カードの幅を指す（カード自身の grid-template-columns では使えない）
+   */
+  --model-size: 44cqi;
+  container-type: inline-size;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 44%);
+}
+
+.showcase .top {
+  display: contents;
+}
+
+.showcase .grip {
+  grid-column: 1 / -1;
+}
+
+.showcase .grip,
+.showcase .head {
+  touch-action: none;
+  cursor: grab;
+}
+
+.showcase .head {
+  grid-column: 1;
+  grid-row: 2;
+}
+
+.showcase .fold {
+  grid-column: 1;
+  grid-row: 3;
+}
+
+/*
+ * 模型の欄は、左の文の長さによらず正方形で固定する（カードごとに大きさが変わらないように。かめの判断、2026-11-19）。
+ * 高さは「開き具合（--fold-open、開いて 1、閉じて 0）× 一辺」を下限、一辺を上限にして、行の高さに合わせて伸ばす。
+ * 閉じると下限が 0 になり、名前の行の高さに縮む。ドラッグの途中は、PlaceCard が指に合わせた開き具合を渡す
+ */
+.showcaseModel {
+  --fold-open: 1;
+  grid-column: 2;
+  grid-row: 2 / 4;
+  align-self: stretch;
+  min-height: calc(var(--fold-open) * var(--model-size));
+  max-height: var(--model-size);
+  border-radius: var(--radius-l);
+  background: var(--color-go-soft);
+  overflow: hidden;
+  /* 閉じる・開く動きは、名前の行より下の枠（.fold、.folded）と同じ長さと曲線にする */
+  transition: min-height 340ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.folded ~ .showcaseModel {
+  --fold-open: 0;
+  transition: min-height 300ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .showcaseModel,
+  .folded ~ .showcaseModel {
+    transition: none;
+  }
+}
+
+.below {
+  grid-column: 1 / -1;
+}
+
+/* 建った建物のカードは左の列が狭いので、希望の文を折り返して出す。とても長い文だけ、3 行目の終わりで省く */
+.showcase .wish {
+  align-items: flex-start;
+}
+
+.showcase .wishText {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .title {

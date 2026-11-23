@@ -1,0 +1,34 @@
+.form {
+  display: grid;
+  gap: var(--space-2);
+}
+
+/* 入力欄のラベル。shared/ui の Field のラベルと同じ見た目にする */
+.label {
+  font-weight: var(--font-weight-heading);
+  font-size: var(--font-size-s);
+}
+
+/* 入力欄とボタンを横に並べ、下の端をそろえる */
+.row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: var(--space-2);
+}
+
+/* 合言葉は 1 文字ずつ読めるよう、字の間をあける */
+.code input {
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.code input::placeholder {
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.hint {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-sub);
+}

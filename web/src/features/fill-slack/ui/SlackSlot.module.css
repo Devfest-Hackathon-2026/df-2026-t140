@@ -1,0 +1,92 @@
+/* しおりの「ゆとり」。余白だと分かるよう、点線の枠に薄い字で出す（#520） */
+.slot {
+  display: grid;
+  gap: var(--space-2);
+  margin: var(--space-1) 0 var(--space-2);
+  padding: 6px var(--space-2) 6px 6px;
+  border: var(--border-width) dashed var(--color-border);
+  border-radius: var(--radius-m);
+  color: var(--color-text-sub);
+}
+
+.slack {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin: 0;
+}
+
+/* しおりの行の丸と同じ大きさ。何も入っていないので、点線の丸にする */
+.dot {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: var(--border-width) dashed var(--color-border);
+  border-radius: 50%;
+  /* しおりの丸をつなぐ線（widgets/route-timeline）が、点線の丸の中に透けないよう塗る */
+  background: var(--color-surface);
+}
+
+.text {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.name {
+  font-weight: var(--font-weight-heading);
+}
+
+.sub {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+}
+
+/* 空いた時間への提案。地図の提案のピンと同じ薄い青で、まだ決まっていないことが分かるよう薄い字にする */
+.filler {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-2) var(--space-2) 0;
+  border-top: var(--border-width) dashed var(--color-border);
+}
+
+.fillerTitle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin: 0;
+  opacity: 0.8;
+}
+
+.fillerDot {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: var(--border-width) dashed var(--color-route);
+  border-radius: 50%;
+  background: var(--color-route-soft);
+  color: var(--color-route);
+}
+
+.fillerName {
+  color: var(--color-route-edge);
+  font-weight: var(--font-weight-heading);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  /* 丸の右（地名の始まり）にそろえる */
+  padding-left: calc(44px + var(--space-3));
+}
+
+.note {
+  margin: 0;
+  padding-left: calc(44px + var(--space-3));
+  font-size: var(--font-size-xs);
+}

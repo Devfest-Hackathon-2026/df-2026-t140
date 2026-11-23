@@ -1,0 +1,361 @@
+/* 決まったしおり（S14）。画面いっぱい。上の帯は動かさず、中身だけを縦に動かして見る */
+.page {
+  min-height: 100dvh;
+  background: var(--color-bg);
+}
+
+/* 一番上の帯：戻る、旅のタイトル、書き出し */
+.bar {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  /* 中身は本文と同じ幅（560px）にそろえる。PC で右の外側に出る API の使用量の表示に、書き出しのボタンが隠れないように */
+  padding: calc(var(--space-3) + env(safe-area-inset-top)) max(var(--space-4), calc((100% - 560px) / 2 + var(--space-4))) var(--space-3);
+  border-bottom: var(--border-width) solid var(--color-border);
+  background: var(--color-surface);
+}
+
+.title {
+  flex: 1;
+  min-width: 0;
+  display: -webkit-box;
+  overflow: hidden;
+  font-size: var(--font-size-l);
+  line-height: 1.3;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow-wrap: anywhere;
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  width: 100%;
+  max-width: 560px;
+  margin: 0 auto;
+  /* 下は、下の中央の帯に載せた「地図で見る」（帯は高さ 64px ほど）に、最後の行やボタンが隠れないだけあける */
+  padding: var(--space-4) var(--space-4) calc(var(--space-6) + 72px + env(safe-area-inset-bottom));
+}
+
+.missing {
+  padding: var(--space-5) 0;
+}
+
+/* 旅の情報（日程、集合場所、メンバー） */
+.cover {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-l);
+  background: var(--color-surface);
+}
+
+.badge {
+  justify-self: start;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-s);
+  background: var(--color-go-soft);
+  color: var(--color-go-edge);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-heading);
+}
+
+.info {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  font-weight: var(--font-weight-bold);
+  overflow-wrap: anywhere;
+}
+
+.info > svg {
+  flex: none;
+  color: var(--color-text-sub);
+}
+
+.members {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-3);
+  margin: var(--space-1) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.member {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--font-size-s);
+  font-weight: var(--font-weight-bold);
+}
+
+/* 日ごとの行。しおり（S11）と同じく、丸い地点を太い線でつなぐ */
+.day {
+  display: grid;
+  gap: var(--space-1);
+  padding: var(--space-3) var(--space-3) var(--space-2);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-l);
+  background: var(--color-surface);
+}
+
+.dayTitle {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-1);
+  color: var(--color-route-edge);
+  font-size: var(--font-size-m);
+}
+
+.date {
+  color: var(--color-text-sub);
+  font-size: var(--font-size-xs);
+}
+
+.rows {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.item {
+  position: relative;
+}
+
+/* 丸と丸をつなぐ線。最後の行には引かない */
+.item:not(:last-child)::before {
+  content: '';
+  position: absolute;
+  top: 40px;
+  bottom: -14px;
+  left: 25px;
+  width: 6px;
+  border-radius: var(--radius-pill);
+  background: var(--color-border);
+}
+
+.row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 64px;
+  padding: 6px var(--space-1) 6px 6px;
+}
+
+.dot {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  margin-bottom: 4px;
+  border: 3px solid var(--color-surface);
+  border-radius: 50%;
+  background: var(--dot-color);
+  color: var(--color-text-on-color);
+  box-shadow:
+    0 4px 0 color-mix(in srgb, var(--dot-color) 70%, #000),
+    0 0 0 1px var(--color-border);
+}
+
+.origin {
+  --dot-color: var(--color-text);
+}
+
+/* 時刻の欄。集合場所は「集合」「出発」の札つきで 2 段。時刻は右にそろえ、どの行でも同じ幅にする */
+.times {
+  flex: none;
+  display: grid;
+  justify-items: end;
+  gap: 4px;
+  /* 発案者の枠つきの時刻の欄（4.4em）と「集合」などの字が入っても、地名に詰まらないよう、中身の幅に合わせて広がる */
+  width: auto;
+  min-width: 5.4em;
+  font-size: var(--font-size-s);
+}
+
+.slot {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.tag {
+  color: var(--color-text-sub);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+  white-space: nowrap;
+}
+
+.time {
+  flex: none;
+  width: 3.2em;
+  color: var(--color-text-sub);
+  font-size: var(--font-size-s);
+  font-weight: var(--font-weight-heading);
+  font-variant-numeric: tabular-nums;
+}
+
+.text {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+/* 決まったしおりは読むためのものなので、名前とやりたいことは省略せずに折り返す */
+.name {
+  font-size: 18px;
+  font-weight: var(--font-weight-heading);
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+.sub {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-width: 0;
+  color: var(--color-text-sub);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+}
+
+.wish {
+  overflow-wrap: anywhere;
+}
+
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 var(--space-3);
+  color: var(--color-text-sub);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+}
+
+/* 「滞在 1 時間 30 分」「次まで移動 45 分」は、それぞれを途中で折り返さない */
+.meta > span {
+  white-space: nowrap;
+}
+
+/* 食事・宿などの、ピンのない小さな行（今のしおりにはまだない） */
+.minor {
+  min-height: 44px;
+}
+
+.minorDot {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  margin: 0 7px;
+  border-radius: 50%;
+  background: var(--color-surface-sunken);
+  color: var(--color-text-sub);
+  box-shadow: 0 0 0 1px var(--color-border);
+}
+
+/* 宿に決まった建物の行の「宿泊」の札（地図のしおりの札と同じ見た目） */
+.stayTag {
+  flex: none;
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-pill);
+  background: var(--color-route-soft);
+  color: var(--color-route-edge);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-heading);
+}
+
+.minorName {
+  color: var(--color-text-sub);
+  font-size: var(--font-size-s);
+  font-weight: var(--font-weight-bold);
+  overflow-wrap: anywhere;
+}
+
+.note {
+  margin: 0;
+  color: var(--color-text-sub);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+  text-align: center;
+}
+
+.note a {
+  color: inherit;
+}
+
+/* 行の丸に模型の絵を出すとき（試験的。2026-11-21）。丸の枠・地・影はなくし、模型だけを出す */
+.modelDot {
+  border-color: transparent;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  overflow: visible;
+}
+
+.modelSprite {
+  display: block;
+  width: 60px;
+  height: 60px;
+  margin: -14px -8px -2px;
+  pointer-events: none;
+}
+
+
+/* 次の場所までの移動の行（地図のしおり S11 と同じ部品を、押せない形で出す） */
+.move {
+  padding: 0 0 var(--space-1) 52px;
+}
+
+
+/* 行の右端の天気の絵（その日・その府県の予報。着く時刻の 6 時間の区切り） */
+.weather {
+  flex: none;
+  align-self: center;
+}
+
+/*
+ * 下の中央に浮かべる「地図で見る」。スクロールしても同じ位置に残す。
+ * 下の端に、上が透けるグラデーションの帯を敷いて載せる。帯の下のほうは地の色で塗り、
+ * 行の右端の天気の絵がボタンの横に透けて重なって見えないようにする（UI/UX レビューの F-1）
+ */
+.floating {
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 2;
+  display: flex;
+  justify-content: center;
+  padding: var(--space-6) var(--space-4) calc(var(--space-4) + env(safe-area-inset-bottom));
+  background: linear-gradient(to bottom, transparent, var(--color-bg) 55%);
+  pointer-events: none;
+}
+
+.mapButton {
+  pointer-events: auto;
+  border-radius: 999px;
+  /* 本文の上に浮いて見えるよう、ふだんの縁の影に浮かべる影を足す */
+  box-shadow:
+    0 var(--edge-depth) 0 var(--button-edge),
+    var(--shadow-float);
+}
+
+.mapButton:active {
+  box-shadow: 0 0 0 var(--button-edge);
+}

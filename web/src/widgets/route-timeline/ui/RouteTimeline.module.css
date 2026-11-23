@@ -34,6 +34,15 @@
   position: relative;
 }
 
+/*
+ * 行の中身（場所の行、ごはん・ゆとり・宿の枠、移動の行）は、下の線より手前に描く。線（::before）は位置を決めた要素なので、
+ * 位置を決めていない中身（ごはんの枠など）より上に描かれ、枠の丸に線がかぶっていた。中身も位置を決めた要素にし、
+ * 線より後ろの順で描く（場所の行 .stop は前から position: relative なので、線が丸の裏に回っていた）
+ */
+.item > * {
+  position: relative;
+}
+
 /* 丸と丸をつなぐ線。最後の行には引かない */
 .item:not(:last-child)::before {
   content: '';
@@ -42,7 +51,7 @@
   bottom: -14px;
   left: 25px;
   width: 6px;
-  border-radius: 3px;
+  border-radius: var(--radius-pill);
   background: var(--color-border);
 }
 
@@ -97,13 +106,98 @@ button.stop:focus-visible {
   --dot-color: var(--color-text);
 }
 
-.time {
+/*
+ * 時刻の欄。集合場所の行は「集合」「出発」の札つきで 2 段、場所の行は着く時刻の 1 段。
+ * 時刻は右にそろえ、どの行でも同じ幅にする（地名の始まりをそろえる）
+ */
+.times {
   flex: none;
+  display: grid;
+  justify-items: end;
+  gap: 4px;
+  width: 5.4em;
+  font-size: var(--font-size-s);
+}
+
+/* 英語の札（Meet、Depart、Arrive）は長いので、場所の名前に重ならないよう広げる */
+.times:lang(en) {
+  width: 6.8em;
+}
+
+.slot {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.tag {
+  color: var(--color-text-sub);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+  white-space: nowrap;
+}
+
+.time {
   width: 3.2em;
   color: var(--color-text-sub);
   font-size: var(--font-size-s);
   font-weight: var(--font-weight-heading);
   font-variant-numeric: tabular-nums;
+}
+
+/*
+ * 時刻を押して直せる行（renderTime を渡したとき）。左の丸と時刻（.lead）は場所の情報を開かず、
+ * 地名から右（.open）だけを押すと開く。押せる範囲が分かるよう、押したときの塗りは .open にだけ出す
+ */
+.split {
+  gap: 0;
+  padding: 0;
+}
+
+.split .times {
+  /* 枠つきの欄（shared/ui の TimeField）が入るぶん広げる */
+  width: calc(4.4em + 30px);
+}
+
+.split .times:lang(en) {
+  width: calc(5.6em + 30px);
+}
+
+.lead {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 6px 0 6px 6px;
+}
+
+.open {
+  flex: 1;
+  min-width: 0;
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: 6px var(--space-1) 6px var(--space-3);
+  border: none;
+  border-radius: var(--radius-m);
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+}
+
+button.open {
+  cursor: pointer;
+}
+
+button.open:hover {
+  background: var(--color-surface-sunken);
+}
+
+button.open:focus-visible {
+  outline: 3px solid var(--color-route);
+  outline-offset: 0;
 }
 
 .text {
@@ -138,7 +232,263 @@ button.stop:focus-visible {
   white-space: nowrap;
 }
 
+/* 同じ場所を何度も訪れるしおりで、その行が何回目か（#528） */
+.nth {
+  flex: none;
+  padding: 0 6px;
+  border-radius: var(--radius-pill);
+  background: var(--color-route-soft);
+  color: var(--color-route-edge);
+}
+
+/* 行の下。左に滞在と出る時刻、右に行のボタン */
+.below {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+/* 行のボタン（行の複製、行を消す。features/repeat-visit） */
+.actions {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 0 var(--space-1) var(--space-1) 0;
+}
+
+/* 右矢印。絵だけの高さにして、行の縦の真ん中に置く（文字の行の高さで上にずれないように） */
 .chevron {
   flex: none;
+  display: grid;
+  place-items: center;
   color: var(--color-text-sub);
+}
+
+/*
+ * 行を長押しで取り、ほかの場所の行に落として順番を入れ替える（企画書「ユーザー体験」3-6）。
+ * 取った行はほかの押せるものと同じ「ぷっくり」（縁と下の厚み）で浮き、元の場所はくぼむ。
+ */
+.grabbable {
+  -webkit-touch-callout: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* 取っているあいだは、行を押したときの塗りを出さない */
+.dragging button.stop:hover:not(.floating),
+.dragging button.open:hover {
+  background: none;
+}
+
+/* 取った行の元の場所。くりぬいたように、沈んだ地に上の内側の影 */
+.hollow {
+  z-index: 2;
+  border-radius: var(--radius-m);
+  background: var(--color-surface-sunken);
+  box-shadow:
+    inset 0 var(--edge-depth) 0 var(--color-edge),
+    inset 0 0 0 var(--border-width) var(--color-border);
+}
+
+/* 取った行につながる線は消す */
+.item.lineHidden::before {
+  display: none;
+}
+
+/* 取った行。指についていき、少し持ち上がって大きくなる */
+.floating {
+  z-index: 2;
+  border-radius: var(--radius-m);
+  background: var(--color-surface);
+  box-shadow:
+    0 var(--edge-depth) 0 var(--color-edge),
+    0 0 0 var(--border-width) var(--color-border),
+    var(--shadow-float);
+  transform: translate(var(--drag-x, 0), calc(var(--drag-y, 0) - var(--edge-depth))) scale(1.02);
+  cursor: grabbing;
+  animation: stop-pop 180ms ease-out;
+}
+
+button.stop.floating:hover {
+  background: var(--color-surface);
+}
+
+/* 差し込む位置の線が、取った行の下に隠れないよう、線が出ているあいだは取った行を透かす */
+.overTarget {
+  opacity: 0.6;
+}
+
+/* ぽこっと取れる */
+@keyframes stop-pop {
+  0% {
+    transform: none;
+    box-shadow: none;
+  }
+  60% {
+    transform: translateY(calc(-2 * var(--edge-depth))) scale(1.06);
+  }
+}
+
+/* 落とさずに離した：元の場所へ戻る（stopDrag.ts の RETURN_MS と合わせる） */
+.returning {
+  transform: none;
+  box-shadow: none;
+  transition:
+    transform 200ms ease-out,
+    box-shadow 200ms ease-out;
+  animation: none;
+}
+
+/*
+ * いま落とすと差し込まれる位置。行と行のあいだに、太い横の線を出す（ノートブックのセルを動かすときと同じ）。
+ * 線は、入る位置の行の上（上へ動かすとき）か下（下へ動かすとき）のすき間の真ん中に置く
+ */
+.insertBefore::after,
+.insertAfter::after {
+  content: '';
+  position: absolute;
+  z-index: 1;
+  left: 0;
+  right: 0;
+  height: 4px;
+  border-radius: var(--radius-pill);
+  background: var(--color-route);
+  pointer-events: none;
+}
+
+.insertBefore::after {
+  top: -2px;
+}
+
+.insertAfter::after {
+  bottom: -2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .floating {
+    animation: none;
+  }
+
+  .returning {
+    transition: none;
+  }
+}
+
+/*
+ * 場所の行の下の、そこにいる時間と出る時刻。左の線に沿って、移動の行と同じ位置から書く。
+ * 上から、着く時刻（行）→ 滞在 → 出る時刻 → 移動の行 → 次の場所の着く時刻、と時間の順に並ぶ
+ */
+.stay {
+  display: grid;
+  justify-items: start;
+  gap: 2px;
+  margin: 0;
+  /* 移動の行（.move）の中のボタンの字の始まりにそろえる */
+  padding: 0 0 var(--space-1) 62px;
+  font-size: var(--font-size-s);
+}
+
+.stayLength {
+  color: var(--color-text-sub);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+}
+
+/* 次の場所までの移動の行。丸をつなぐ線の右に置く */
+.move {
+  padding: 0 0 var(--space-1) 52px;
+}
+
+/* 行の丸に模型の絵を出すとき（試験的。2026-11-21）。丸の枠・地・影はなくし、模型だけを出す */
+.modelDot {
+  border-color: transparent;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  overflow: visible;
+}
+
+.modelSprite {
+  display: block;
+  width: 60px;
+  height: 60px;
+  margin: -14px -8px -2px;
+  pointer-events: none;
+}
+
+/* 場所を出る時刻。到着の欄（shared/ui の TimeField）と同じ形の枠で出す。宿の行の出発（翌朝に宿を出る時刻）は直せないので、押せる見た目（カーソル）にはしない */
+.leaveBox {
+  box-sizing: border-box;
+  flex: none;
+  display: inline-grid;
+  place-items: center;
+  width: 4.4em;
+  height: 30px;
+  margin: 0 0 2px;
+  padding: 0 4px;
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-s);
+  background: var(--color-surface);
+  box-shadow: 0 2px 0 var(--color-edge);
+  color: var(--color-text);
+  font-size: var(--font-size-s);
+  font-weight: var(--font-weight-heading);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+/* 宿に決まった建物の行の「宿泊」の印 */
+.stayTag {
+  flex: none;
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-pill);
+  background: var(--color-route-soft);
+  color: var(--color-route-edge);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-heading);
+}
+
+/*
+ * 時刻が決まったイベントの行の時刻（#581）。開催の時刻から変えられないので、押して直せる時刻（枠）にはせず、文字だけで出す。
+ * ほかの行の枠と縦の位置がそろうよう、大きさは .leaveBox と同じにする
+ */
+.fixedTime {
+  box-sizing: border-box;
+  flex: none;
+  display: inline-grid;
+  place-items: center;
+  width: 4.4em;
+  height: 30px;
+  margin: 0 0 2px;
+  padding: 0 4px;
+  color: var(--color-text);
+  font-size: var(--font-size-s);
+  font-weight: var(--font-weight-heading);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+/* イベントの行の「開催 19:30〜20:30」の印 */
+.eventTag {
+  flex: none;
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-pill);
+  background: var(--color-route-soft);
+  color: var(--color-route-edge);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-heading);
+}
+
+/* イベントに間に合わない、次の予定と重なる、開催日と違う日のお知らせ */
+.eventIssue {
+  color: var(--color-danger);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-heading);
+}
+
+/* 飛行機の区間で乗り降りする空港の行。場所の行と同じ形で、押せないので少し低くする */
+.airport {
+  min-height: 56px;
 }

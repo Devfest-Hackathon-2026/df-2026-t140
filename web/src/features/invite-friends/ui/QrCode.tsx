@@ -1,3 +1,4 @@
+import { translate } from '@/shared/lib'
 import { useMemo } from 'react'
 import { qrDrawing } from '../lib/qrPath'
 
@@ -20,7 +21,7 @@ export function QrCode({ text, size = 176 }: Props) {
       height={size}
       viewBox={`${-QUIET} ${-QUIET} ${side} ${side}`}
       role="img"
-      aria-label="招待リンクの QR コード"
+      aria-label={translate('招待リンクの QR コード', "Invitation link QR code")}
       shapeRendering="crispEdges"
     >
       <rect x={-QUIET} y={-QUIET} width={side} height={side} fill="#ffffff" />

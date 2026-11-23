@@ -1,0 +1,54 @@
+.box {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-l);
+  background: var(--color-surface);
+}
+
+.title {
+  font-size: var(--font-size-s);
+  font-weight: var(--font-weight-heading);
+}
+
+/* 見出しの後ろに小さく添える。入りきらない幅では、添え書きごと次の行へ送る */
+.note {
+  display: inline-block;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-body);
+  color: var(--color-text-sub);
+}
+
+.lead {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-sub);
+}
+
+.linked {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.who {
+  flex: 1;
+  display: grid;
+  min-width: 0;
+}
+
+.email {
+  overflow: hidden;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-sub);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ログアウトは、まちがえて押しにくいよう、説明の下の右はしに小さく置く */
+.logout {
+  display: flex;
+  justify-content: flex-end;
+  margin: calc(-1 * var(--space-2)) 0;
+}

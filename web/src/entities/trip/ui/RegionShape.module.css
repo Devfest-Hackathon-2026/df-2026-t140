@@ -1,0 +1,26 @@
+.shape {
+  flex-shrink: 0;
+  stroke-linejoin: round;
+}
+
+.shape path {
+  transition:
+    fill 200ms ease,
+    stroke 200ms ease;
+}
+
+.none path {
+  fill: var(--color-map-park);
+  stroke: var(--color-go);
+  stroke-opacity: 0.55;
+}
+
+.part path {
+  fill: var(--color-go-soft);
+  stroke: var(--color-go);
+}
+
+.picked path {
+  fill: var(--color-go);
+  stroke: var(--color-go-edge);
+}

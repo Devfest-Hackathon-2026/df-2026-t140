@@ -6,7 +6,8 @@ import { chmodSync, cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rm
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { after, before, test } from 'node:test'
-import { changedHumansRecords, isHumansRecord, isRacedWithMain, publishHumans } from '../lib/publish-humans.mjs'
+import { appendProdCheck } from '../lib/humans.mjs'
+import { changedHumansRecords, isHumansRecord, isRacedWithMain, mergeWithMain, publishHumans, rememberBase } from '../lib/publish-humans.mjs'
 
 let base
 let repo
@@ -39,7 +40,7 @@ before(() => {
   ok(git(['commit', '-q', '-m', 'chore: 最初の commit']), '最初の commit')
   ok(git(['remote', 'add', 'origin', remote]), 'remote')
   ok(git(['push', '-q', '-u', 'origin', 'main']), 'push')
-  ok(git(['clone', '-q', remote, other], base), 'ほかの人の clone')
+  ok(git(['clone', '-q', '-c', 'core.autocrlf=false', remote, other], base), 'ほかの人の clone') // 取り出す前に改行の変換を止める（Windows の autocrlf=true で、全ファイルが変更ありに見えて pull が止まる）
   configure(other)
   ok(git(['switch', '-q', '-c', 'feat/work']), '作業ブランチ')
   write(repo, 'web/app.ts', 'export {}\n')
@@ -172,4 +173,104 @@ test('git hooks を入れた環境でも入り、ほかの人が先に main を�
   assert.equal(second.ok, true, second.message)
   assert.equal(git(['show', 'origin/main:todo/humans/2026-11-08-rival.md'], hooked).stdout, record('2026-11-08-rival'), 'ほかの人の記録を消した')
   assert.equal(git(['show', 'origin/main:todo/humans/2026-11-08-b.md'], hooked).stdout, record('2026-11-08-b'))
+})
+
+test('同じ記録が main で先に変わっていたら、手元の版で上書きせず、重ねて入れる（本番での確認のまとめ）', () => {
+  const path = 'todo/humans/2026-11-22-prod-check.md'
+  const v1 = '---\nid: 2026-11-22-prod-check\nstatus: open\n---\n\n## 決めてほしいこと\n\n### 1. A\n\n- [ ] a\n\n## 背景\n\nなし\n'
+  const pushFromOther = (text, message) => {
+    write(other, path, text)
+    ok(git(['add', path], other), 'add')
+    ok(git(['commit', '-q', '-m', message], other), 'ほかの人の commit')
+    ok(git(['push', '-q', 'origin', 'main'], other), 'ほかの人の push')
+  }
+  // AI-2（other）が main にまとめを作り、AI-1（repo）がそれを取り込む
+  ok(git(['fetch', '-q', 'origin'], other), 'ほかの人の fetch')
+  ok(git(['reset', '-q', '--hard', 'origin/main'], other), 'ほかの人を main にそろえる')
+  pushFromOther(v1, 'docs: まとめを作る')
+  ok(git(['pull', '-q', '--no-rebase', '--no-edit', 'origin', 'main']), '取り込む')
+  // AI-2 が 2 番を足して main に入れた。AI-1 の手元はまだ 1 番だけ
+  const v2 = appendProdCheck(v1, { heading: 'B' })
+  pushFromOther(v2, 'docs: 2 番を足す')
+
+  // 古い手元の版に足して publish すると、同じ所を変えているので止まり、main の 2 番は消えない
+  write(repo, path, appendProdCheck(v1, { heading: 'C' }))
+  const stale = publishHumans({ root: repo, files: [path], message: 'docs: 記録' })
+  assert.equal(stale.ok, false, '古い版で main を上書きした')
+  assert.equal(onMain(path), v2)
+  ok(git(['checkout', '--', path]), '手元の足し分を捨てる')
+
+  // prod-check と同じく、main の版を取り、その版から作ったと記録して足せば、2 番も 3 番も残る
+  // （このブランチが main から分かれたときの版は 1 番だけのまま。記録がないと、同じ所への書き足しとしてぶつかる）
+  const latest = mergeWithMain(repo, path)
+  assert.equal(latest.ok, true, latest.message)
+  assert.equal(latest.text, v2)
+  assert.equal(latest.main, v2)
+  rememberBase(repo, path, latest.main)
+  const v3 = appendProdCheck(latest.text, { heading: 'C' })
+  assert.match(v3, /### 2\. B[^]*### 3\. C/)
+  write(repo, path, v3)
+  const appended = publishHumans({ root: repo, files: [path], message: 'docs: 記録' })
+  assert.equal(appended.ok, true, appended.message)
+  assert.equal(onMain(path), v3)
+  assert.equal(existsSync(join(repo, '.harness/humans-base/feat/work', path)), false, '入れたあとも元の記録が残った')
+
+  // 人が main で印を付けて done にした。手元の版が古くても、main の版を見て done と分かり、publish しても元に戻らない
+  ok(git(['fetch', '-q', 'origin'], other), 'ほかの人の fetch')
+  ok(git(['reset', '-q', '--hard', 'origin/main'], other), 'ほかの人を main にそろえる')
+  const decided = v3.replace('status: open', 'status: done').replace('- [ ] a', '- [x] a')
+  pushFromOther(decided, 'docs: 印を付けて done にする')
+  ok(git(['fetch', '-q', 'origin']), '取り直す')
+  assert.equal(mergeWithMain(repo, path).text, decided)
+  const again = publishHumans({ root: repo, files: [path], message: 'docs: 記録' })
+  assert.equal(again.ok, true, again.message)
+  assert.equal(onMain(path), decided, '古い手元の版で、人の印と done を消した')
+})
+
+test('このブランチで commit 済みの記録を入れたあと、main で足されてから、もう一度変えて入れても止まらない', () => {
+  const path = 'todo/humans/2026-11-22-kept.md'
+  write(repo, path, 'a\nb\nc\nd\ne\n')
+  ok(git(['add', path]), 'add')
+  ok(git(['commit', '-q', '-m', 'docs: ブランチで頼む']), 'ブランチで commit')
+  const first = publishHumans({ root: repo, files: [path], message: 'docs: 記録' })
+  assert.equal(first.ok, true, first.message)
+  assert.deepEqual(first.kept, [path])
+  // ほかの人が main で末尾に足した。このブランチは main を取り込んでいない（merge-base にはこのファイルがない）
+  ok(git(['fetch', '-q', 'origin'], other), 'ほかの人の fetch')
+  ok(git(['reset', '-q', '--hard', 'origin/main'], other), 'ほかの人を main にそろえる')
+  write(other, path, 'a\nb\nc\nd\ne\nf\n')
+  ok(git(['commit', '-qam', 'docs: 足す'], other), 'ほかの人の commit')
+  ok(git(['push', '-q', 'origin', 'main'], other), 'ほかの人の push')
+  // 手元で 1 行目を変えて入れる。いま main に入れた版を元に重ねるので、ほかの人の f も残る
+  write(repo, path, 'A\nb\nc\nd\ne\n')
+  const second = publishHumans({ root: repo, files: [path], message: 'docs: 記録' })
+  assert.equal(second.ok, true, second.message)
+  assert.equal(onMain(path), 'A\nb\nc\nd\ne\nf\n')
+})
+
+test('重ねる元の記録はブランチごとで、別のブランチの古い版には当てない', () => {
+  const path = 'todo/humans/2026-11-22-prod-check.md'
+  // ほかの人が main のまとめに足した。手元のブランチはまだ取り込んでいない
+  ok(git(['fetch', '-q', 'origin'], other), 'ほかの人の fetch')
+  ok(git(['reset', '-q', '--hard', 'origin/main'], other), 'ほかの人を main にそろえる')
+  write(other, path, appendProdCheck(readFileSync(join(other, path), 'utf8'), { heading: 'Z' }))
+  ok(git(['commit', '-qam', 'docs: Z を足す'], other), 'ほかの人の commit')
+  ok(git(['push', '-q', 'origin', 'main'], other), 'ほかの人の push')
+  ok(git(['fetch', '-q', 'origin']), '取り直す')
+  const latest = onMain(path)
+  // feat/work で main の今の版を元として記録し、そのまままとめが古い版の別のブランチへ移って、古い版に足す
+  rememberBase(repo, path, latest)
+  ok(git(['switch', '-q', '-c', 'feat/old']), '別のブランチ')
+  const stale = git(['show', `HEAD:${path}`])
+  assert.equal(stale.status, 0, stale.stderr)
+  assert.notEqual(stale.stdout, latest)
+  write(repo, path, `${stale.stdout}\n追記\n`)
+  // feat/work の記録を当てると、元 = main の版と見なして古い版で上書きし、Z が消える。
+  // ブランチが違うので当てず、このブランチが main から分かれたときの版を元に重ねるので、Z も追記も残る
+  const result = publishHumans({ root: repo, files: [path], message: 'docs: 記録' })
+  assert.equal(result.ok, true, result.message)
+  assert.match(onMain(path), /### \d+\. Z/, '別のブランチの記録を当てて、main で足された Z を消した')
+  assert.match(onMain(path), /追記\n$/)
+  ok(git(['checkout', '--', path]), '後片付け')
+  ok(git(['switch', '-q', 'feat/work']), 'もとのブランチ')
 })

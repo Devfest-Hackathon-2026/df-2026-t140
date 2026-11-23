@@ -3,6 +3,8 @@ export type RequestBuildResult =
   | 'ok'
   /** 旅のメンバーではない */
   | 'not-member'
+  /** 旅程が確定している（確定しているあいだは建てない。features/confirm-shiori） */
+  | 'confirmed'
   /** ピンがない */
   | 'not-found'
   /** もう工事中か、完成している */

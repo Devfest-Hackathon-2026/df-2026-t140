@@ -1,5 +1,5 @@
 import { useSession } from '@/shared/api'
-import { playSound, prepareSounds } from '@/shared/lib'
+import { playSound, prepareSounds, translate as t } from '@/shared/lib'
 import { useToast } from '@/shared/ui'
 import { leaveTrip } from '../api/leaveTrip'
 
@@ -17,10 +17,10 @@ export function useLeaveTrip(tripId: string, onLeaving: () => void) {
     try {
       await leaveTrip(session, tripId)
       playSound('close')
-      toast('旅から抜けました')
+      toast(t('旅から抜けました', 'You left the trip'))
     } catch {
       playSound('error')
-      toast('旅から抜けられませんでした。もう一度試してください')
+      toast(t('旅から抜けられませんでした。もう一度試してください', 'Could not leave the trip. Try again.'))
     }
   }
 }

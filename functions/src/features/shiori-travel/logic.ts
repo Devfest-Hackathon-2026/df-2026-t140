@@ -1,14 +1,14 @@
 import type { LatLng } from '../../domain/pin'
 import type { Route } from '../../domain/route'
 import type { ShioriTravelResult } from './types'
-import { buildPlan, type PlanOrigin, type PlanPlace, STYLE_TIMINGS, travelLegs, travelTable } from '../../domain/routePlan'
+import { visitOrder } from '../../domain/visit'
+import { buildPlan, type PlanOrigin, type PlanPlace, routeTiming, travelLegs, travelTable } from '../../domain/routePlan'
 
 // しおりの移動時間を Routes で計算し直す、純粋な判断。SDK を使わないので、Emulator なしで試せる（scripts/functions.test.mjs）。
 
 /** ルートの回る順に、建った場所を並べる。建っていない（消えた）場所は飛ばす */
 export function routeOrder(route: Pick<Route, 'pinIds'>, places: readonly PlanPlace[]): PlanPlace[] {
-  const placeOf = new Map(places.map((place) => [place.id, place]))
-  return route.pinIds.flatMap((id) => placeOf.get(id) ?? [])
+  return visitOrder(route.pinIds, places)
 }
 
 /**
@@ -16,7 +16,7 @@ export function routeOrder(route: Pick<Route, 'pinIds'>, places: readonly PlanPl
  * 取れなかった区間だけは、直線距離の目安で埋める
  */
 export function replan(
-  route: Pick<Route, 'style'>,
+  route: Pick<Route, 'style' | 'legModes' | 'legFlights' | 'stopTimes' | 'lodging'>,
   order: readonly PlanPlace[],
   origin: PlanOrigin,
   days: number,
@@ -25,7 +25,7 @@ export function replan(
   const { keys } = travelLegs(order, origin)
   const table = travelTable(keys, legSeconds)
   if (table.size === 0) return null
-  const plan = buildPlan(order, origin, days, STYLE_TIMINGS[route.style] ?? STYLE_TIMINGS.shortest, table)
+  const plan = buildPlan(order, origin, days, routeTiming(route), table, route.legModes, { saved: route.legFlights })
   return { schedule: plan.schedule, totalMoveMinutes: plan.totalMoveMinutes }
 }
 

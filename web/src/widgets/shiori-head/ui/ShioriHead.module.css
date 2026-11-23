@@ -1,0 +1,44 @@
+/* しおりの上の部分（しおり S11 と、しおりビュー S14 で同じ） */
+.head {
+  flex: none;
+  display: grid;
+  gap: var(--space-3);
+}
+
+.chips {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.badges {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* おもな移動の切り替えと、電車・バスの目安の断り書き */
+.mode {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.modeNote {
+  margin: 0;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-sub);
+}
+
+.modeNote p {
+  margin: 0;
+}
+
+/* 出典の行。断り書きより目立たせない */
+.source {
+  margin: 0;
+  color: var(--color-text-sub);
+  font-size: 10px;
+  opacity: 0.8;
+}

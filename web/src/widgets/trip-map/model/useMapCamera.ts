@@ -33,11 +33,17 @@ export function useMapCamera(onViewChange: (bounds: MapBounds, label: string) =>
   // 0.05 きざみに丸めてから持つ（指 2 本で縮めているあいだ、細かすぎる描き直しをしない）。
   // 引いた側へ丸め、建物の大きさを、実際の間隔より大きく見積もらないようにする
   const onZoom = useCallback((next: number) => setZoom(Math.floor(next * 20) / 20), [])
+  // 地図の幅（px）。寄ったときの建物の大きさを決めるのに使う。面が知らせてくるまでは null
+  const [width, setWidth] = useState<number | null>(null)
+  // 面が最後に知らせてきた見え方と大きさ。見えている所がまるごと近くに収まった印だけを出すのに使う（usePinsInView）（動かし終えたときに変わる）
+  const [shown, setShown] = useState<{ view: MapView; size: Size } | null>(null)
 
   const onView = useCallback(
     (view: MapView, bounds: MapBounds, size: Size) => {
       current.current = { view, size }
       setReady(true)
+      setWidth(size.width)
+      setShown({ view, size })
       onZoom(view.zoom)
       onViewChange(bounds, describeBounds(bounds))
     },
@@ -98,5 +104,5 @@ export function useMapCamera(onViewChange: (bounds: MapBounds, label: string) =>
     surface.current?.follow(viewCenteredOn(point, zoom, padding), tilt)
   }, [])
 
-  return { surface, ready, zoom, onView, onZoom, zoomBy, showPoints, centerOn, showBounds, fitZoom, currentZoom, currentSize, follow }
+  return { surface, ready, zoom, width, shown, onView, onZoom, zoomBy, showPoints, centerOn, showBounds, fitZoom, currentZoom, currentSize, follow }
 }

@@ -7,6 +7,14 @@ import { prefabFor } from './prefabs'
 
 export { prefabFor } from './prefabs'
 
+/**
+ * 本番の確認テスト（scripts/smoke.mjs）が作る旅か。旅の ID が smoke- で始まる。
+ * この旅だけは、本番でも部品の模型で「完成」にしてよい（Gemini を呼ばないので費用はかからない）
+ */
+export function isSmokeTrip(tripId: string): boolean {
+  return tripId.startsWith('smoke-')
+}
+
 /** トリガーが引き受けるピンか。「工事中」で、まだ誰も引き受けていないもの */
 export function shouldStartBuild(pin: Pick<Pin, 'status' | 'buildStartedAt'> | undefined): boolean {
   return pin?.status === 'building' && !pin.buildStartedAt

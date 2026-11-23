@@ -16,7 +16,7 @@ export interface SimFrame {
 }
 
 function detect(): SimFrame | null {
-  if (!import.meta.env.DEV) return null
+  if (!import.meta.env?.DEV) return null
   const match = PATTERN.exec(typeof window === 'undefined' ? '' : window.name)
   if (!match) return null
   return { id: match[1], appName: `sim-${match[1]}`, storagePrefix: `sim-${match[1]}:` }

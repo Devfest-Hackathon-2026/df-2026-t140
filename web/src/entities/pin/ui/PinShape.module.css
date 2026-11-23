@@ -44,3 +44,31 @@
   stroke: var(--color-go);
   stroke-width: 2;
 }
+
+/* しおりの空いた時間への提案：薄い青地に青い縁と絵（白い候補、オレンジの選んだピンと見分ける。#520） */
+.filler {
+  color: var(--color-route);
+}
+
+.filler .body {
+  fill: var(--color-route-soft);
+  stroke: var(--color-route);
+  stroke-width: 2.5;
+  stroke-dasharray: 4 3;
+}
+
+/* 前の検索の候補：灰色の半透明の小さいピン。いまの検索の候補（白）より目立たせない（Takana の依頼、2026-11-22） */
+.past {
+  opacity: 0.55;
+  filter: none;
+}
+
+.past .body {
+  fill: var(--color-text-sub);
+  stroke: var(--color-surface);
+  stroke-width: 2.5;
+}
+
+.dot {
+  fill: var(--color-surface);
+}

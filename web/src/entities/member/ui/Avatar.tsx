@@ -1,4 +1,5 @@
 import type { CSSProperties } from 'react'
+import { translate as t } from '@/shared/lib'
 import { initialOf } from '../model/member'
 import type { Member } from '../model/types'
 import styles from './Avatar.module.css'
@@ -23,7 +24,7 @@ export function AvatarStack({ members, size = 36, max = 5 }: { members: Person[]
   const shown = members.length > max ? members.slice(0, max - 1) : members
   const rest = members.length - shown.length
   return (
-    <span className={styles.stack} role="img" aria-label={`メンバー：${members.map((m) => m.displayName).join('、')}`}>
+    <span className={styles.stack} role="img" aria-label={`${t('メンバー：', 'Members: ')}${members.map((m) => m.displayName).join(t('、', ', '))}`}>
       {shown.map((member, index) => (
         <Avatar key={index} member={member} size={size} />
       ))}

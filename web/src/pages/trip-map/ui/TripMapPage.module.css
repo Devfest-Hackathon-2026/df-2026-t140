@@ -9,6 +9,15 @@
   overscroll-behavior: none;
 }
 
+/*
+ * 地図の画面では、ブラウザがページ全体を指 2 本で拡大しないようにする。上の帯やシートに指がかかると、
+ * 地図ではなく画面全体が拡大されていた（Takana の依頼、2026-11-22）。地図の拡大・縮小は地図が受け取り、
+ * シートの中の上下のスクロールと、左右の払いはそのまま。iPhone の Safari 向けの止め方は、model/usePageZoomLock
+ */
+:global(html):has(.page) {
+  touch-action: pan-x pan-y;
+}
+
 /* 画面いっぱいの枠。地図が下に広がり、上の帯と下の操作欄がその上に重なる */
 .page {
   position: relative;
@@ -41,8 +50,7 @@
   pointer-events: none;
 }
 
-.top > * > *,
-.top > .view {
+.top > * > * {
   pointer-events: auto;
 }
 
@@ -52,10 +60,46 @@
   pointer-events: none;
 }
 
+/*
+ * 下の欄は、中のシートより高くなることがある（シートの max-height が欄の高さの % で、欄は上限の 78% まで伸びる）。
+ * 欄そのものは指を受けず、シートの上に空いた所では地図を動かせるようにする（Takana の報告、2026-11-23。
+ * しおりのシートの上が、見えない欄にふさがれて、地図の拡大・縮小・移動ができなかった）
+ */
 .bottom {
   display: flex;
   min-height: 0;
   max-height: 78%;
+  pointer-events: none;
+}
+
+.bottom > * {
+  pointer-events: auto;
+}
+
+/*
+ * 下のシートを上の帯の下まで広げている間（shared/lib の useSheetExpand）は、高さの上限を外す。
+ * シートの高さは、上の帯のすぐ下までに合わせてある。上の欄（.top）には帯の下に「しおり」の札などもあり、
+ * 下の欄はその下までしか伸びないので、中のシートを下の端にそろえ（伸ばさず）、はみ出した分は上へ出す（札に重ねる）
+ */
+.bottom:has([data-sheet-expanded]) {
+  align-items: flex-end;
+  max-height: none;
+}
+
+/*
+ * しおりのシートを全面にしたとき、上の帯を、シートの白い面より手前に出す。
+ * 全面のシートは、白い面を帯の裏から画面の一番上まで伸ばして、地図を隠す（ShioriSheet.module.css の .tall::before）
+ */
+.topOver {
+  z-index: 2;
+}
+
+/* しおりのシートを全面にしたとき。上の帯のすぐ下から画面の下まで、シートに使う（間の空き .spacer は置かない） */
+.bottomTall {
+  flex: 1;
+  max-height: none;
+  /* 上の帯とのすきま */
+  margin-top: var(--space-2);
 }
 
 /*
@@ -83,6 +127,8 @@
   --button-border: var(--button-bg);
 
   position: relative;
+  /* 縦は、まん中の旅の名前の帯と右のホームボタンと同じ高さにする（帯が 2 段でも。Takana の依頼、2026-11-20） */
+  align-self: stretch;
   border-top-left-radius: 0;
   border-bottom-left-radius: 0;
   box-shadow: none;
@@ -120,12 +166,14 @@
   pointer-events: none;
 }
 
-/* 左上の丸いルートボタン */
+/* 左上のしおりボタン。帯の高さの正方形（入れ物の .routeSlot）いっぱいに広げ、角は帯と同じ丸み */
 .routeButton {
-  border-radius: 50%;
+  width: 100%;
+  height: 100%;
+  border-radius: var(--radius-l);
 }
 
-/* 上の帯の下の行：いちばん新しいできごと（メンバーの顔は、旅の名前の帯の中。#231） */
+/* 上の帯の下の行：左にいま見ているあたり、右にいちばん新しいできごと（メンバーの顔は、旅の名前の帯の中。#231） */
 .row {
   display: flex;
   align-items: center;
@@ -142,11 +190,13 @@
   font-weight: var(--font-weight-heading);
 }
 
+/* 右に寄せる（左のいま見ているあたりがないときも右に置く）。狭いときは、こちらの文を省略して 1 行に収める */
 .activity {
   display: flex;
   align-items: center;
   gap: var(--space-2);
   min-width: 0;
+  margin-left: auto;
   min-height: 40px;
   padding: 0 var(--space-3) 0 6px;
   cursor: pointer;
@@ -186,16 +236,36 @@
   }
 }
 
-/* いま見ているあたり（ここから探す） */
+/*
+ * いま見ているあたり（ここから探す）。上の帯の下の行の左に置く。
+ * 右のできごとの文を残したいので、幅は行の 3 分の 1 までにし、長いあたりの名前は省略する
+ */
 .view {
-  justify-self: start;
   display: flex;
+  flex: 0 1 auto;
   align-items: center;
   gap: var(--space-1);
-  margin-left: var(--space-3);
+  min-width: 0;
+  max-width: 33%;
+  margin: 0;
   padding: 2px var(--space-3) 2px var(--space-2);
   border-color: transparent;
   color: var(--color-text-sub);
+}
+
+/* できごとが出ていないときは、右が空いているので省略しない */
+.view:only-child {
+  max-width: none;
+}
+
+.view > svg {
+  flex: none;
+}
+
+.viewText {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .srOnly {
@@ -207,10 +277,13 @@
   white-space: nowrap;
 }
 
-/* 左上のルートボタン（しおりを開く）と、まだ見ていない場所が入った印（S07） */
+/* 左上のしおりボタン（しおりを開く）と、まだ見ていない場所が入った印（S07）。上の帯の左上の正方形いっぱいに広げる */
 .routeSlot {
   position: relative;
   flex: none;
+  display: flex;
+  width: 100%;
+  height: 100%;
 }
 
 .newBadge {
@@ -265,13 +338,88 @@
   font-weight: var(--font-weight-bold);
 }
 
+/* 旅の再生の下の欄：着いた場所の写真と、その下の左の操作（一時停止、速さ） */
+.tour {
+  display: grid;
+  gap: var(--space-3);
+  width: 100%;
+  padding: 0 var(--space-4) calc(var(--space-4) + env(safe-area-inset-bottom));
+  pointer-events: none;
+}
+
 /* 旅の再生で、着いた場所の写真を出す所。下の真ん中に置く（地図は、その上の残りで建物を映す） */
 .snapshot {
   display: flex;
   justify-content: center;
   width: 100%;
-  padding: 0 var(--space-4) calc(var(--space-4) + env(safe-area-inset-bottom));
   pointer-events: none;
+}
+
+/* 旅の再生で、途中の空港に着いたときの札。写真の代わりに、飛行機の丸と名前を出す */
+.viaCard {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  justify-self: center;
+  max-width: 100%;
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-m);
+  background: var(--color-surface);
+  box-shadow: 0 var(--edge-depth) 0 var(--color-edge);
+}
+
+.viaIcon {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--color-text);
+  color: var(--color-text-on-color);
+}
+
+.viaText {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.tourControls {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+/* 一時停止のボタン。場所の情報の再生ボタン（widgets/place-sheet の .play）と同じ見た目と位置（シートの左上の外 ＝ 画面の左下） */
+.tourPause {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  padding: 0;
+  border: var(--border-width) solid var(--color-route-edge);
+  border-radius: 50%;
+  background: var(--color-route);
+  box-shadow:
+    0 4px 0 var(--color-route-edge),
+    var(--shadow-float);
+  color: var(--color-text-on-color);
+  cursor: pointer;
+  touch-action: manipulation;
+  pointer-events: auto;
+}
+
+.tourPause:active {
+  transform: translateY(4px);
+  box-shadow: none;
+}
+
+.tourPause:focus-visible {
+  outline: 3px solid var(--color-route);
+  outline-offset: 3px;
 }
 
 .snapshot:empty {
@@ -296,4 +444,40 @@
   min-width: 0;
   color: var(--color-text-sub);
   font-size: var(--font-size-xs);
+}
+
+/* 旅程が確定しているあいだ、やりたいことの欄の代わりに出す案内（2026-11-21、#502） */
+.confirmedBar {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4) calc(var(--space-3) + env(safe-area-inset-bottom));
+  border-radius: var(--radius-l) var(--radius-l) 0 0;
+  background: var(--color-surface);
+  box-shadow: var(--shadow-float);
+  pointer-events: auto;
+}
+
+.confirmedText {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  color: var(--color-route-edge);
+  font-size: var(--font-size-s);
+  font-weight: var(--font-weight-bold);
+}
+
+/* 地図だけの画面（?view=map）の上：左上の戻るボタンと、再生中の印を横に並べる */
+.mapOnlyTop {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: calc(var(--space-3) + env(safe-area-inset-top)) var(--space-4) 0;
+}
+
+/* やりたいことの欄の入れ物（旅を作った直後の 2 段目の案内が、この中の欄を指す。UI/UX レビューの M-1）。欄と同じく横いっぱいに広げる */
+.wishSlot {
+  flex: 1;
+  width: 100%;
+  min-width: 0;
 }

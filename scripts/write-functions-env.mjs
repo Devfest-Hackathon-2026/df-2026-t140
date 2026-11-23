@@ -16,13 +16,15 @@
 //                       人が写真の 1 日の上限を 0 回から上げてから。todo/humans/2026-11-07-places-photos-reviews.md）
 //   KG_API_KEY          模型の見た目の参考に、場所の名前を引く Knowledge Graph Search API のキー。空なら書かない（参考なしで作る。
 //                       todo/humans/2026-11-08-model-kg-description.md、functions/src/adapters/knowledge-graph.ts）
+//   ODPT_CONSUMER_KEY   飛行機の時刻表（ANA・JAL）を読む、公共交通オープンデータセンターのアクセストークン。空なら書かない（飛行機は距離の式の目安。
+//                       todo/humans/2026-11-18-odpt-flight-timetable.md、functions/src/adapters/odpt.ts）
 //
 // 本番で vertex を有効にするのは人（todo/humans/2026-11-07-vertex-gemini-passphrase.md）。
 import { writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 
 const PROJECT_ID = 'konbu-devfest-hackathon-2026'
-const NAMES = ['GEMINI_PROVIDER', 'VERTEX_FLASH_MODEL', 'VERTEX_ARGON_MODEL', 'AI_PASSPHRASE', 'ROUTES_API_KEY', 'PLACES_API_KEY', 'PLACES_REVIEWS', 'PLACES_PHOTOS', 'KG_API_KEY']
+const NAMES = ['GEMINI_PROVIDER', 'VERTEX_FLASH_MODEL', 'VERTEX_ARGON_MODEL', 'AI_PASSPHRASE', 'ROUTES_API_KEY', 'PLACES_API_KEY', 'PLACES_REVIEWS', 'PLACES_PHOTOS', 'KG_API_KEY', 'ODPT_CONSUMER_KEY']
 
 const lines = NAMES.map((name) => [name, process.env[name]?.trim() ?? ''])
   .filter(([, value]) => value.length > 0)

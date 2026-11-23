@@ -6,7 +6,7 @@
 
 | 用途 | リポジトリ | 公開範囲 |
 | --- | --- | --- |
-| 開発 | Lazyturtle0852/konbu-devfest | 非公開 |
+| 開発 | konbus/konbu-devfest（2026-11-18 に Lazyturtle0852 から移した） | 非公開 |
 | 提出 | Devfest-Hackathon-2026/df-2026-t140 | 公開 |
 
 - 審査は提出用リポジトリの内容で行われる。提出用では GitHub Actions と Pages を使えない

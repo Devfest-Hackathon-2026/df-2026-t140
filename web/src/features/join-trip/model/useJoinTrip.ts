@@ -1,7 +1,7 @@
 import { type FormEvent, useState } from 'react'
 import { memberNameProblem, recallMyName, rememberMyName } from '@/entities/member'
 import { useSession } from '@/shared/api'
-import { playSound, prepareSounds } from '@/shared/lib'
+import { playSound, prepareSounds, translate as t } from '@/shared/lib'
 import { joinTrip } from '../api/joinTrip'
 
 /**
@@ -37,8 +37,8 @@ export function useJoinTrip(tripId: string) {
       const denied = (cause as { code?: string }).code === 'permission-denied'
       setProblem(
         denied
-          ? 'この招待リンクの旅が見つかりません。リンクが途中で切れていないか、送ってくれた人に確かめてください。'
-          : '参加できませんでした。電波のよいところで、もう一度押してください。',
+          ? t('この招待リンクの旅が見つかりません。リンクが途中で切れていないか、送ってくれた人に確かめてください。', 'Could not find the trip. Ask the sender to check the invite link.')
+          : t('参加できませんでした。電波のよいところで、もう一度押してください。', 'Could not join the trip. Check your connection and try again.'),
       )
       setSending(false)
     }

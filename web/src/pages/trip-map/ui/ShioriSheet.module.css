@@ -18,53 +18,156 @@
   /* 出るとき・閉じるとき・閉じた状態から開くときの動きは、shared/ui の sheetMotion のクラスで付ける */
 }
 
+/*
+ * 全面：画面いっぱいに広げた形（地図なしで、しおりだけを見る。S14）。下の欄（TripMapPage の .bottom）いっぱいに広がる。
+ * 行の欄が残りの高さを使い、行が少なくても画面の下まで白い
+ */
+.tall {
+  height: 100%;
+  max-height: none;
+  /* 下の白い面（::before）を、シートの地の上・中身の下に重ねる */
+  isolation: isolate;
+}
+
+/*
+ * 全面のあいだ、シートの上の辺より上（旅の名前の帯がある所）も白で覆い、地図を見せない（かめの方針、2026-11-20）。
+ * 帯は、この白の上に残る（TripMapPage の .topOver）。中身の位置は変えず、白い面だけを上へ伸ばす。
+ * シートの上の辺と同じ形（角の丸みと枠線）の面を、シートの裏に重ね、上へずらして見せる。
+ * 動いていないときは、画面の高さぶん上へずらし、画面の一番上まで（帯の高さが変わっても）覆う。
+ * 高さは画面 2 つぶん：上へずらしても、シートの上の角の丸みの外（地図が見えるすきま）と左右の枠線を覆う
+ */
+.tall::before {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  top: calc(-1 * var(--border-width));
+  right: calc(-1 * var(--border-width));
+  left: calc(-1 * var(--border-width));
+  height: 200dvh;
+  /* 枠線は、動いている間だけ見せる（止まっているときは、画面いっぱいの白にする） */
+  border: var(--border-width) solid var(--tall-cover-border, transparent);
+  border-bottom: none;
+  border-radius: var(--radius-sheet) var(--radius-sheet) 0 0;
+  background: var(--color-surface);
+  box-shadow: var(--shadow-float);
+  transform: translateY(-100dvh);
+}
+
+/*
+ * 全面のときは、取っ手を見せず、つかめなくする（白い画面で、シートではなくなる。かめの決定、2026-11-20）。
+ * 場所は取ったままにする（上がる・下がる動きの始めと終わりで、下の中身の位置がずれないように）
+ */
+.tall .handle {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* ふつうの高さから全面へ：全面の形のまま、上の辺が元の高さにあった位置（--tall-from だけ下）から上がる。同じシートが伸びたように見える */
+.rise {
+  --tall-cover-border: var(--color-border);
+
+  animation: tall-rise 340ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* 同時に、白い面が、シートの上の辺から画面の一番上（--tall-cover-to だけ上）まで伸びる */
+.rise::before {
+  animation: tall-cover-rise 340ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* 全面からふつうの高さへ：全面の形のまま、ふつうの高さの位置（--tall-to だけ下）まで下がる。終わったら、ふつうの形に切り替わる */
+.lower {
+  --tall-cover-border: var(--color-border);
+
+  animation: tall-lower 300ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  pointer-events: none;
+}
+
+/* 同時に、白い面が、いまの高さ（--tall-cover-from）からシートの上の辺まで縮む */
+.lower::before {
+  animation: tall-cover-lower 300ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+@keyframes tall-rise {
+  from {
+    transform: translateY(var(--tall-from, 0px));
+  }
+}
+
+@keyframes tall-lower {
+  from {
+    transform: translateY(var(--tall-from, 0px));
+  }
+  to {
+    transform: translateY(var(--tall-to, 0px));
+  }
+}
+
+@keyframes tall-cover-rise {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(calc(-1 * var(--tall-cover-to, 0px)));
+  }
+}
+
+@keyframes tall-cover-lower {
+  from {
+    transform: translateY(calc(-1 * var(--tall-cover-from, 0px)));
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rise,
+  .lower,
+  .rise::before,
+  .lower::before {
+    animation: none;
+  }
+}
+
 /* 地図に触れて、日程の行だけが残った状態 */
 .peek {
   gap: var(--space-2);
 }
 
+/* 取っ手から上の部分まで（つかめる範囲。shared/ui の sheetGripZoneClass）。シートと同じすきまで縦に並べる */
+.zone {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+/* 取っ手。横幅いっぱいの帯にして、押せる範囲をシートの端まで広げる（線は ::after で、真ん中に 44px だけ描く） */
 .handle {
   flex: none;
-  align-self: center;
-  width: 44px;
+  align-self: stretch;
+  position: relative;
   height: 5px;
+  /* 全面との行き来で、ふわっと消える・出る */
+  transition: opacity 200ms ease-out;
+}
+
+.handle::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  width: 44px;
+  margin: 0 auto;
   border-radius: var(--radius-pill);
   background: var(--color-edge);
 }
 
-.chips {
-  flex: none;
+/* 閉じた状態の、日程とメンバーの数の印 */
+.badges {
+  flex: 1;
   display: flex;
   align-items: center;
   gap: var(--space-2);
-}
-
-.members {
-  flex: 1;
-  display: flex;
-}
-
-/* Google マップで道順を開く。白いぷっくりの小さなボタン */
-.maps {
-  flex: none;
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-1);
-  min-height: 44px;
-  padding: 0 var(--space-3);
-  border: var(--border-width) solid var(--color-border);
-  border-radius: var(--radius-m);
-  background: var(--color-surface);
-  box-shadow: 0 3px 0 var(--color-edge);
-  color: var(--color-text);
-  font-size: var(--font-size-s);
-  font-weight: var(--font-weight-heading);
-  text-decoration: none;
-}
-
-.maps:active {
-  transform: translateY(3px);
-  box-shadow: none;
 }
 
 /* 旅を映像で見る再生ボタン。シートの外側の左上に浮かべる（シートといっしょに動く）。ルートの色のぷっくりの丸 */
@@ -87,6 +190,15 @@
   cursor: pointer;
 }
 
+/* 全面のときの再生ボタン。外に浮かべず、上の部分の中（書き出しのボタンの左）に、書き出しのボタンと同じ高さで置く */
+.playInside {
+  position: static;
+  flex: none;
+  width: var(--tap-size);
+  height: var(--tap-size);
+  box-shadow: 0 3px 0 var(--color-route-edge);
+}
+
 .play:active {
   transform: translateY(4px);
   box-shadow: none;
@@ -97,11 +209,16 @@
   outline-offset: 3px;
 }
 
+/*
+ * 行の欄。シートの下の余白（下端の安全域）は、シートでなくこの欄の中に取り、行がシートの下端まで流れるようにする。
+ * シートに取ると、iPhone のホーム画面から開いた PWA では、ホームバーの分の白い帯が行の手前に残り、
+ * 行が画面の下より上で切れて見えた（Takana の依頼、2026-11-20）
+ */
 .timeline {
   flex: 1 1 auto;
   min-height: 0;
-  margin: 0 calc(-1 * var(--space-2));
-  padding: 0 var(--space-2);
+  margin: 0 calc(-1 * var(--space-2)) calc(-1 * (var(--space-4) + env(safe-area-inset-bottom)));
+  padding: 0 var(--space-2) calc(var(--space-4) + env(safe-area-inset-bottom));
   overflow-y: auto;
   overscroll-behavior: contain;
 }
@@ -146,4 +263,68 @@
   .sheet {
     max-height: 100%;
   }
+}
+
+/* 料金の目安の下の、駅と線路のデータの出典（UI/UX レビューの S-6） */
+.railSource {
+  margin-top: calc(-1 * var(--space-2));
+  margin-bottom: var(--space-2);
+}
+
+/* 確定できない理由の下の「＋ ○ 日目の宿を決める」（UI/UX レビューの S-4） */
+.blockedAction {
+  margin-top: var(--space-2);
+}
+
+/* 行の一番下の「しおりだけを見る」（全面にする）と「地図で見る」（ふつうの高さに戻す） */
+.final {
+  margin-top: var(--space-2);
+}
+
+/*
+ * 全面（地図なし）のときに出す、移動時間の出どころ。Maps Platform の表示の決まりに合わせる：
+ * 「Google Maps」の字は、Roboto の太さ 400、12〜16px、色は #5e5e5e、折り返さない、訳さない。行の欄の外に置き、いつも見えるようにする
+ */
+.attribution {
+  flex: none;
+  margin: calc(-1 * var(--space-1)) 0 0;
+  color: #5e5e5e;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.attributionName {
+  font-family: Roboto, Arial, sans-serif;
+  font-weight: 400;
+  white-space: nowrap;
+}
+
+/* 行の欄の先頭の、確定の案内とおもな移動の切り替え。行といっしょに上下に送る */
+.lead {
+  display: grid;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+
+/* 旅程が確定しているあいだの案内。行の欄の先頭（おもな移動の切り替えの上）に出し、行といっしょに送る。ルートの色の帯 */
+.confirmedNote {
+  display: flex;
+  align-items: center;
+  flex: none;
+  gap: var(--space-2);
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-m);
+  background: var(--color-route-soft);
+  color: var(--color-route-edge);
+  font-size: var(--font-size-s);
+  font-weight: var(--font-weight-bold);
+}
+
+/* 確定の前、発案者でない人に、確定でしおりができることを出す（確定のボタンの場所） */
+.confirmHint {
+  margin: var(--space-2) 0 0;
+  color: var(--color-text-sub);
+  font-size: var(--font-size-s);
+  text-align: center;
 }

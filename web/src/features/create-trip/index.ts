@@ -1,2 +1,2 @@
 export { createTrip } from './api/createTrip'
-export { CreateTripForm } from './ui/CreateTripForm'
+export { type CreateTripState, useCreateTrip } from './model/useCreateTrip'

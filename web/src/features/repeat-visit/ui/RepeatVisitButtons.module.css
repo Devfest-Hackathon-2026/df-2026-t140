@@ -1,0 +1,28 @@
+/* しおりの行の右端の、小さな丸いボタン（行の複製、行を消す）。移動の行のボタンと同じ、縁つきの白 */
+.button {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface);
+  color: var(--color-text-sub);
+  cursor: pointer;
+}
+
+.button:hover {
+  background: var(--color-surface-sunken);
+}
+
+.button:focus-visible {
+  outline: 3px solid var(--color-route);
+  outline-offset: 0;
+}
+
+.button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}

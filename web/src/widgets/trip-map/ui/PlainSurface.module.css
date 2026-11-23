@@ -65,3 +65,42 @@
 .dashed {
   stroke-dasharray: 1 13;
 }
+
+/* 塗る範囲（旅をつくるときに選ぶ地方） */
+.areas {
+  position: absolute;
+  inset: 0;
+}
+
+.area {
+  stroke-linejoin: round;
+  cursor: pointer;
+}
+
+/* 塗り方（model/surface.ts の AreaLook）。GoogleSurface.tsx の looks と合わせる */
+.picked {
+  fill: var(--color-go);
+  fill-opacity: 0.38;
+  stroke: var(--color-go-edge);
+  stroke-width: 2.5;
+}
+
+.unpicked {
+  fill: var(--color-go);
+  fill-opacity: 0.08;
+  stroke: var(--color-go);
+  stroke-opacity: 0.55;
+  stroke-width: 1;
+}
+
+.outside {
+  fill: var(--color-text);
+  fill-opacity: 0.28;
+  stroke: none;
+}
+
+.inside-line {
+  fill: none;
+  stroke: var(--color-go-edge);
+  stroke-width: 2.5;
+}

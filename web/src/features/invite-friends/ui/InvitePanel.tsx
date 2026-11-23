@@ -1,3 +1,4 @@
+import { translate } from '@/shared/lib'
 import { useState } from 'react'
 import { Button, Icon } from '@/shared/ui'
 import { useInvite } from '../model/useInvite'
@@ -8,34 +9,55 @@ interface Props {
   tripId: string
   /** 共有するときの文に入れる旅のタイトル */
   tripTitle: string
+  /** 旅に入っている合言葉。まだなければ、このパネルが作ってもらう */
+  joinCode: string | undefined
 }
 
-/** 招待リンクのコピー、QR コード、アプリでの共有（S02） */
-export function InvitePanel({ tripId, tripTitle }: Props) {
-  const { url, copy, share } = useInvite(tripId, tripTitle)
+/**
+ * 旅の合言葉、OS の共有の画面を開くボタン、QR コード（S02）。
+ * 招待リンクのコピーは、OS の共有の画面でする（共有の画面のない端末では、共有のボタンがコピーになる）
+ */
+export function InvitePanel({ tripId, tripTitle, joinCode: tripJoinCode }: Props) {
+  const { url, joinCode, copyJoinCode, share } = useInvite(tripId, tripTitle, tripJoinCode)
   const [showQr, setShowQr] = useState(false)
 
   return (
     <div className={styles.panel}>
-      <div className={styles.linkBox}>
-        <Icon name="link" size={20} />
-        <span className={styles.url} data-testid="invite-url">
-          {url}
-        </span>
-        <Button variant="soft" size="small" onClick={() => void copy()}>
-          コピー
-        </Button>
-      </div>
+      {joinCode !== null && (
+        <div className={styles.codeBox}>
+          <div className={styles.codeText}>
+            <span className={styles.codeLabel}>{translate('旅の合言葉', "Trip code")}</span>
+            {joinCode ? (
+              <span className={styles.code} data-testid="join-code">
+                {joinCode}
+              </span>
+            ) : (
+              <span className={styles.codePending}>{translate('用意しています…', "Getting ready…")}</span>
+            )}
+          </div>
+          <Button variant="soft" size="small" disabled={!joinCode} onClick={() => void copyJoinCode()}>
+            {translate('コピー', 'Copy')}
+          </Button>
+        </div>
+      )}
       <div className={styles.actions}>
-        <Button onClick={() => setShowQr((shown) => !shown)} aria-expanded={showQr}>
-          {showQr ? 'QRコードを閉じる' : 'QRコードを表示'}
+        <Button block onClick={() => void share()} data-testid="invite-share">
+          <Icon name="share" />
+          {translate('共有する', 'Share')}
         </Button>
-        <Button onClick={() => void share()}>アプリで共有</Button>
+        <Button
+          iconOnly
+          aria-label={showQr ? translate('QRコードを閉じる', 'Hide QR code') : translate('QRコードを表示', 'Show QR code')}
+          aria-expanded={showQr}
+          onClick={() => setShowQr((shown) => !shown)}
+        >
+          <Icon name="qr" />
+        </Button>
       </div>
       {showQr && (
         <div className={styles.qr}>
           <QrCode text={url} />
-          <p>友達のスマホのカメラで読み取ると、参加の画面が開きます。</p>
+          <p>{translate('友達のスマホのカメラで読み取ると、参加の画面が開きます。', "Friends can scan this code with their phone camera to join.")}</p>
         </div>
       )}
     </div>

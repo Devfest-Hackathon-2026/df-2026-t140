@@ -1,9 +1,84 @@
-/* しおりの再生で走る車。親は、その場所を指す大きさ 0 の点 */
+/* しおりの再生で走る乗り物。親は、その場所を指す大きさ 0 の点 */
 .car {
   position: absolute;
   top: 0;
   left: 0;
   display: block;
   pointer-events: none;
+}
+
+/* 模型の絵。浮かせるとき（飛行機）は、これだけを上へずらす */
+.body {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: block;
   filter: drop-shadow(0 3px 2px rgb(0 0 0 / 25%));
+}
+
+/* 飛行機は、絵のすぐ下の影を付けない（浮かせると影まで浮く。影は地面に別に置く） */
+.flying {
+  filter: none;
+}
+
+/* 飛行機の、地面の影 */
+.shadow {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: rgb(0 0 0 / 18%);
+  filter: blur(2px);
+}
+
+/* 歩く人：足を開いた 2 つの絵を交互に出し、上下に小さく弾ませる */
+.step {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: block;
+}
+
+.walking {
+  animation: bob 0.44s ease-in-out infinite;
+}
+
+/* 絵は透けているので、出していないほうは消す（重ねたままだと、下の絵の足が見える） */
+.walking .step {
+  animation: stride 0.44s steps(1, end) infinite;
+}
+
+.walking .step:last-child {
+  animation-delay: -0.22s;
+}
+
+@keyframes stride {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
+}
+
+@keyframes bob {
+  0%,
+  50%,
+  100% {
+    transform: translateY(0);
+  }
+  25%,
+  75% {
+    transform: translateY(-2px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .walking,
+  .walking .step {
+    animation: none;
+  }
+
+  .walking .step:last-child {
+    opacity: 0;
+  }
 }

@@ -22,13 +22,13 @@ export interface OverlayBuilding {
   selected: boolean
   /** いま建ったばかり。青い輪郭線を付ける（選んでいるときはオレンジだけ） */
   celebrating: boolean
+  /** 模型を、画面の上で幅 size（px）の絵と同じ大きさに見せる */
+  size: number
 }
 
 export interface BuildingsOverlay {
-  /** 出す建物を入れ替える。前になかった建物は、ふくらむ動きで出す */
+  /** 出す建物を入れ替える。前になかった建物は、ふくらむ動きで出す。大きさが変わった建物は、なめらかに新しい大きさにする */
   setBuildings(buildings: readonly OverlayBuilding[]): void
-  /** 模型を、画面の上で幅 sizePx の絵と同じ大きさに見せる */
-  setSize(sizePx: number): void
   /** ルートの線を入れ替える。模型より先に描くので、模型が線の上に出る（lib/routeLinesLayer.ts） */
   setLines(lines: readonly (readonly LatLngPoint[])[], style: RouteLinesStyle): void
 }
@@ -67,6 +67,8 @@ interface Placed {
   /** 建ったばかりのときの輪郭線。太さは選んでいるときと同じで、色だけ違う */
   celebrateOutline: Group
   bornAt: number | null
+  /** いま描いている大きさ（px）。building.size が変わったとき、なめらかに近づける */
+  shownSize: number
 }
 
 /**
@@ -75,7 +77,6 @@ interface Placed {
  */
 export function createBuildingsOverlay(
   map: google.maps.Map,
-  sizePx: number,
   outlineColors: { selected: string; celebrating: string },
 ): BuildingsOverlay {
   const overlay = new google.maps.WebGLOverlayView()
@@ -89,9 +90,6 @@ export function createBuildingsOverlay(
   const routeLines = createRouteLinesLayer()
   const placed = new Map<string, Placed>()
   let renderer: WebGLRenderer | null = null
-  let size = sizePx
-  // いま描いている大きさ。setSize で変わったとき、全部の建物でそろって新しい大きさへなめらかに近づける
-  let shownSize = sizePx
   let lastDraw = performance.now()
   let started = false
 
@@ -124,16 +122,18 @@ export function createBuildingsOverlay(
     let animating = false
     const ease = 1 - Math.exp(-Math.min(now - lastDraw, MAX_FRAME_MS) / EASE_MS)
     lastDraw = now
-    shownSize += (size - shownSize) * ease
-    if (Math.abs(size - shownSize) < 0.5) shownSize = size
-    else animating = true
     for (const item of placed.values()) item.holder.visible = false
-    for (const { building, holder, outline, celebrateOutline, bornAt } of placed.values()) {
+    for (const item of placed.values()) {
+      const { building, holder, outline, celebrateOutline, bornAt } = item
+      // 大きさは建物ごとに、新しい値へなめらかに近づける（拡大・縮小やまわりの建物で変わる）
+      item.shownSize += (building.size - item.shownSize) * ease
+      if (Math.abs(building.size - item.shownSize) < 0.5) item.shownSize = building.size
+      else animating = true
       // 色のトークンを読めなかったとき（空）は、黒い線にせず輪郭線を出さない。選んでいるときはオレンジだけ
       outline.visible = building.selected && outlineColors.selected !== ''
       celebrateOutline.visible = !building.selected && building.celebrating && outlineColors.celebrating !== ''
       const metersPerPixel = (METERS_PER_PIXEL_AT_ZOOM_0 * Math.cos((building.lat * Math.PI) / 180)) / 2 ** zoom
-      const metersPerUnit = (shownSize / SPRITE_UNITS_ACROSS) * metersPerPixel
+      const metersPerUnit = (item.shownSize / SPRITE_UNITS_ACROSS) * metersPerPixel
       const age = bornAt === null ? POP_MS : now - bornAt
       if (age < POP_MS) animating = true
       holder.scale.setScalar(metersPerUnit * pop(age / POP_MS))
@@ -176,13 +176,16 @@ export function createBuildingsOverlay(
         holder.visible = false
         scene.add(holder)
         // 最初に並べるぶんは動かさない。あとから建ったものだけ、ふくらませる
-        placed.set(building.id, { building, holder, outline, celebrateOutline, bornAt: started ? performance.now() : null })
+        placed.set(building.id, {
+          building,
+          holder,
+          outline,
+          celebrateOutline,
+          bornAt: started ? performance.now() : null,
+          shownSize: building.size,
+        })
       }
       started = true
-      overlay.requestRedraw()
-    },
-    setSize(sizePx) {
-      size = sizePx
       overlay.requestRedraw()
     },
     setLines(lines, style) {

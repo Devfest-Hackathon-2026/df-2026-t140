@@ -2,7 +2,7 @@
 name: 開発タスク
 about: AI エージェントまたは人が進める開発タスク（`npm run work` と連動）
 title: ''
-labels: status:todo
+labels: ''
 assignees: ''
 ---
 

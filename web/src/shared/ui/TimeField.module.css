@@ -1,0 +1,54 @@
+/*
+ * 押して直せる時刻の欄（TimeField）。枠で囲み、下に少し厚み（ぷっくり）を付けて、押せることが分かるようにする。
+ * 入力中も同じ大きさのまま（まわりの行がずれない）
+ */
+.field {
+  box-sizing: border-box;
+  flex: none;
+  display: inline-grid;
+  place-items: center;
+  width: 4.4em;
+  height: 30px;
+  margin: 0 0 2px;
+  padding: 0 4px;
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-s);
+  background: var(--color-surface);
+  box-shadow: 0 2px 0 var(--color-edge);
+  color: var(--color-text);
+  font: inherit;
+  font-size: var(--font-size-s);
+  font-weight: var(--font-weight-heading);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  text-align: center;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+button.field:hover {
+  border-color: var(--color-route);
+}
+
+button.field:focus-visible {
+  outline: 3px solid var(--color-route);
+  outline-offset: 1px;
+}
+
+/* 入力中。ルートの色の枠で、いま打っている欄だと分かるようにする */
+.editing {
+  border-color: var(--color-route);
+  box-shadow: 0 0 0 3px var(--color-route-soft);
+  outline: none;
+  cursor: text;
+}
+
+.editing::placeholder {
+  color: var(--color-text-sub);
+  opacity: 0.6;
+}
+
+.busy {
+  opacity: 0.6;
+  cursor: progress;
+}

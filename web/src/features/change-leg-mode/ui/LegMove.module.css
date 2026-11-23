@@ -1,0 +1,99 @@
+.wrap {
+  display: grid;
+  gap: var(--space-1);
+}
+
+/* 移動の行。小さく、丸をつなぐ線の右に出す */
+.move {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  width: fit-content;
+  min-height: 32px;
+  margin: 0;
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-pill);
+  color: var(--color-text-sub);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+}
+
+.button {
+  border: var(--border-width) solid var(--color-border);
+  background: var(--color-surface);
+  font: inherit;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+  cursor: pointer;
+}
+
+.button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.only {
+  padding: 0 6px;
+  border-radius: var(--radius-pill);
+  background: var(--color-route-soft);
+  color: var(--color-route-edge);
+}
+
+.choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.choice {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-height: 44px;
+  padding: 0 var(--space-3);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-m);
+  background: var(--color-surface-sunken);
+  color: var(--color-text-sub);
+  font: inherit;
+  font-size: var(--font-size-s);
+  font-weight: var(--font-weight-bold);
+  cursor: pointer;
+}
+
+.selected {
+  border-color: var(--color-route);
+  background: var(--color-route-soft);
+  color: var(--color-route-edge);
+}
+
+.choice:disabled {
+  cursor: default;
+  opacity: 0.45;
+}
+
+.note {
+  align-self: center;
+  color: var(--color-text-sub);
+  font-size: var(--font-size-xs);
+}
+
+/* 飛行機の区間の便と、時刻表の出典 */
+.flight {
+  display: grid;
+  gap: 2px;
+  padding-left: var(--space-2);
+}
+
+.flightLine {
+  margin: 0;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+}
+
+.notice {
+  margin: 0;
+  color: var(--color-text-sub);
+  font-size: 11px;
+  line-height: 1.5;
+}

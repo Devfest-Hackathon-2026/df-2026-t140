@@ -2,8 +2,9 @@
 // 数える・記録する I/O は adapters/aiGate.ts。手元の agy の上限は別（domain/agyBudget.ts）。
 //
 // 数は技術構成の「費用の上限」（docs/architecture/sources/architecture.html）。
-// Flash（場所の候補、しおりのルート）は累計 300 回まで（約 3 ドル）。Argon（模型）は 1 日 20 回・累計 80 回
-// （ルートと模型も本物にする決定は todo/humans/2026-11-07-vertex-routes-model.md）。
+// Flash（場所の候補、しおりのルート）は累計 300 回まで（約 3 ドル）。Argon（模型）は 1 日 20 回・累計 300 回
+// （ルートと模型も本物にする決定は todo/humans/2026-11-07-vertex-routes-model.md。累計は 80 回から 300 回に上げた：
+// 審査員が本物の模型を見られないと困るため。Lazyturtle0852 の決定、todo/humans/2026-11-22-argon-total-300.md）。
 // 予算アラートは通知だけで止まらないので、コード側で必ず止める（design-principles の cost/gemini-guarded）。
 
 /** Flash（場所の候補、しおりのルート）を Vertex で呼ぶ累計の上限。2 つの機能で 1 つの数を分け合う */
@@ -17,7 +18,7 @@ export const USAGE_ARGON_DOC = 'argon'
 
 /** Argon（模型）を Vertex で呼ぶ 1 日の上限と累計の上限 */
 export const ARGON_DAILY_MAX = 20
-export const ARGON_TOTAL_MAX = 80
+export const ARGON_TOTAL_MAX = 300
 
 /**
  * 全員に本物を開く切り替え（settings/ai の openToAll）。人がコンソールで書き換える（デプロイ不要）。

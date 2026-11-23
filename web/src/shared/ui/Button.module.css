@@ -63,6 +63,14 @@
   --button-edge: var(--color-route-edge);
 }
 
+/* 赤い地。建物を消すなど、取り消せない操作に使う（文字だけの赤は .danger） */
+.destroy {
+  --button-bg: var(--color-danger);
+  --button-text: var(--color-text-on-color);
+  --button-border: var(--color-danger);
+  --button-edge: var(--color-danger-edge);
+}
+
 /* 薄い緑の地。主役ではない「進む」系の操作に使う */
 .soft {
   --button-bg: var(--color-go-soft);

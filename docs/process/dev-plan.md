@@ -51,7 +51,7 @@ Cloud の Gemini（Vertex AI）はまだ使いません。呼び出し口を 1 �
 
 - 地図は案 A（Google Maps に模型を重ねる）に決定済みです
 - キーは `VITE_GOOGLE_MAPS_API_KEY`、マップ ID は `VITE_GOOGLE_MAPS_MAP_ID` で渡します。設定方法は `docs/process/setup.md`
-- 課金を避けるため、1 日の上限をかけてあります。地図の読み込み 300 回、Places のテキスト検索と詳細取得が各 30 回、Routes が 30 回です。写真、オートコンプリート、周辺検索、3D 地図、距離行列は 0 回で、使えません
+- 課金を避けるため、1 日の上限をかけてあります。地図の読み込み 300 回、Places のテキスト検索と詳細取得が各 30 回、Routes が 30 回です。写真、オートコンプリート、周辺検索、3D 地図、距離行列は 0 回で、使えません（開発を始めたときの数。Places はそのあと上げたので、今の上限は `docs/process/setup.md` の「課金を避ける上限」）
 - キーはブラウザ用で、Functions からは使えません。Places で実在を確かめる処理は今夜は作らず、Gemini の提案した場所をそのまま使います
 - Maps 由来の内容を 3D 生成の入力にしない、自作地図と Maps API を一緒に使わない（`CLAUDE.md`）
 
@@ -86,6 +86,6 @@ Cloud の Gemini（Vertex AI）はまだ使いません。呼び出し口を 1 �
   - 注記（2026-11-07）：本番へのデプロイは main への merge ではなく、人が deploy ブランチへ反映したときだけになった（かめの決定、`todo/humans/2026-11-07-deploy-branch.md`）
   - 注記（2026-11-07）：Takana が決めた（`todo/humans/2026-11-07-merge-policy-alignment.md`）。AI にはレビュー（`/review-pr`）までさせ、merge するかはケースバイケースで決める。人が merge を指示しない作業では、この行（merge しない）に従う（Takana の決定：`todo/humans/2026-11-07-merge-case-by-case.md`）。2026-11-07 にかめが緩め、会話で合意した作業は AI のレビューと CI が通れば指示を待たずに merge する（`todo/humans/2026-11-07-merge-on-chat-agreement.md`）
 - 秘密情報をコミットしない。`web/.env.local` はコミットしない
-- 画面が変わるプルリクエストには、`demo-video` スキルで動画を撮って付ける（`CLAUDE.md`）
+- 画面が変わるプルリクエストには、スクリーンショットか動画を付ける。1 つの画面の見た目ならスクリーンショット、流れや動きなら `demo-video` スキルの動画（`CLAUDE.md` の「画面を変えたらスクリーンショットか動画」）
 - 最後に、3 人の計画の動画（スマホ縦長 3 つを横に並べたもの）を 1 本撮る。内容は「実際に旅行を計画してみます」という流れにする
 - 動いていない機能を、動いているように見せない

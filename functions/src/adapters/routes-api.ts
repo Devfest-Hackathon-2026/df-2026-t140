@@ -1,5 +1,6 @@
 import type { LatLng } from '../domain/pin'
 import type { RouteLegs, RoutesApiPort } from '../ports/routes-api'
+import { countApiCall } from './apiUsage'
 
 // Google の Routes API（computeRoutes）で、しおりの区間ごとの移動時間を聞く。
 // かめの決定（todo/humans/2026-11-07-shiori-routes-api.md）：本番だけで使い、開発環境では使わない。
@@ -129,6 +130,7 @@ export const routesApi: RoutesApiPort = {
     if (!routesApiEnabled() || !key || points.length < 2) return null
     if (points.length - 2 > MAX_INTERMEDIATES) return null
     try {
+      await countApiCall('routes')
       const response = await fetch(ENDPOINT, {
         method: 'POST',
         headers: {

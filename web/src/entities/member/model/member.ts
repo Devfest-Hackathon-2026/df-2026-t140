@@ -1,4 +1,4 @@
-import { recall, remember } from '@/shared/lib'
+import { recall, remember, translate as t } from '@/shared/lib'
 
 // 長さの上限は firestore.rules と合わせる
 export const MEMBER_NAME_MAX = 20
@@ -31,8 +31,8 @@ export function freeColor(current: string, usedByOthers: readonly string[]): str
 /** 表示名に足りないところがあれば、画面に出す文を返す。よければ null */
 export function memberNameProblem(displayName: string): string | null {
   const name = displayName.trim()
-  if (!name) return '名前を入れてください'
-  if (name.length > MEMBER_NAME_MAX) return `名前は ${MEMBER_NAME_MAX} 文字までです`
+  if (!name) return t('名前を入れてください', 'Enter your name')
+  if (name.length > MEMBER_NAME_MAX) return t(`名前は ${MEMBER_NAME_MAX} 文字までです`, `Use up to ${MEMBER_NAME_MAX} characters for your name`)
   return null
 }
 

@@ -10,6 +10,8 @@ const PLACES: readonly [name: string, lat: number, lng: number][] = [
   ['羽田', 35.55, 139.78],
   ['成田', 35.77, 140.39],
   ['新宿', 35.69, 139.7],
+  ['目黒', 35.6339, 139.7158],
+  ['めぐろ', 35.6339, 139.7158],
   ['渋谷', 35.66, 139.7],
   ['品川', 35.63, 139.74],
   ['上野', 35.71, 139.78],
@@ -84,7 +86,30 @@ const PLACES: readonly [name: string, lat: number, lng: number][] = [
 ]
 
 /** 出発地の名前から、およその位置を引く。分からなければ null */
+export function knownOriginLocation(name: string): LatLng | null {
+  const input = name.normalize('NFKC').trim()
+  const station = input.toLowerCase().replace(/ station$/, '')
+  const normalized = ENGLISH_STATIONS.get(station) ?? input
+  const found = PLACES.find(([key]) => [key, `${key}駅`, `${key}空港`].includes(normalized))
+  return found ? { lat: found[1], lng: found[2] } : null
+}
+
+// Web の出発地ショートカットと同じ英語名を、追加の外部検索なしで引く。
+const ENGLISH_STATIONS: ReadonlyMap<string, string> = new Map([
+  ['tokyo', '東京駅'],
+  ['shinjuku', '新宿駅'],
+  ['shibuya', '渋谷駅'],
+  ['shinagawa', '品川駅'],
+  ['yokohama', '横浜駅'],
+  ['nagoya', '名古屋駅'],
+  ['kyoto', '京都駅'],
+  ['osaka', '大阪駅'],
+  ['hakata', '博多駅'],
+])
+
 export function originLocation(name: string): LatLng | null {
+  const exact = knownOriginLocation(name)
+  if (exact) return exact
   // 「津」のような 1 文字の名前は、ほかの言葉に紛れるので、名前の先頭にあるときだけ当てる
   const found = PLACES.find(([key]) => (key.length === 1 ? name.startsWith(key) : name.includes(key)))
   return found ? { lat: found[1], lng: found[2] } : null

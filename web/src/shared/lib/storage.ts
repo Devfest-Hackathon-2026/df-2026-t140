@@ -19,3 +19,19 @@ export function recall(key: string): string | null {
     return null
   }
 }
+
+/** 名前が prefix で始まる、覚えた値をすべて読む（古い形で覚えたものを拾い直すとき用） */
+export function recallAll(prefix: string): string[] {
+  try {
+    const full = keyOf(prefix)
+    const values: string[] = []
+    for (let index = 0; index < localStorage.length; index += 1) {
+      const key = localStorage.key(index)
+      const value = key?.startsWith(full) ? localStorage.getItem(key) : null
+      if (value !== null) values.push(value)
+    }
+    return values
+  } catch {
+    return []
+  }
+}

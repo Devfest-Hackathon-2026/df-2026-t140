@@ -8,11 +8,13 @@ import { fileURLToPath } from 'node:url'
 
 const PROJECT_ID = 'konbu-devfest-hackathon-2026'
 const REGION = 'asia-northeast1'
+// 2 組目の Emulator（npm run dev:alt）では、ポートを全部この数だけずらす
+const EMULATOR_PORT_OFFSET = Number(process.env.EMULATOR_PORT_OFFSET ?? 0)
 const urls = {
-  site: 'http://127.0.0.1:5002',
-  auth: 'http://127.0.0.1:9099/identitytoolkit.googleapis.com/v1',
-  firestore: 'http://127.0.0.1:8080/v1',
-  functions: `http://127.0.0.1:5001/${PROJECT_ID}/${REGION}`,
+  site: `http://127.0.0.1:${5002 + EMULATOR_PORT_OFFSET}`,
+  auth: `http://127.0.0.1:${9099 + EMULATOR_PORT_OFFSET}/identitytoolkit.googleapis.com/v1`,
+  firestore: `http://127.0.0.1:${8080 + EMULATOR_PORT_OFFSET}/v1`,
+  functions: `http://127.0.0.1:${5001 + EMULATOR_PORT_OFFSET}/${PROJECT_ID}/${REGION}`,
 }
 const database = `projects/${PROJECT_ID}/databases/(default)/documents`
 const scenario = JSON.parse(readFileSync(fileURLToPath(new URL('../web/src/pages/dev-sim/config/scenario.json', import.meta.url)), 'utf8'))
@@ -141,7 +143,9 @@ for (const id of ['a', 'b', 'c']) {
     const wishId = `wish-${id}-${people.a.uid}`
     const data = { uid: people[id].uid, text: wish.text, bounds: JAPAN_WIDE, status: 'pending' }
     assert.equal(await commit(people[id].token, create(trip('wishes', wishId), data, ['createdAt'])), 200)
-    const pins = await waitFor(`${wish.text} → ピン`, pinsNow, (list) => list.filter((pin) => pin.wishId === wishId).length === 3)
+    // 候補のピンは 1 回の書き込みでまとめて立つので、1 つ見えれば全部そろっている。
+    // 旅の地方（甲信越）の中に見本の場所が少ないと 3 件に満たないことがある（範囲の外からは足さない）
+    const pins = await waitFor(`${wish.text} → ピン`, pinsNow, (list) => list.some((pin) => pin.wishId === wishId))
     assert.ok(pins.some((pin) => pin.name === wish.build), `${wish.text} の候補に ${wish.build} がありません（${pins.map((pin) => pin.name).join('、')}）`)
   }
   actions[`build-${id}`] = async () => {

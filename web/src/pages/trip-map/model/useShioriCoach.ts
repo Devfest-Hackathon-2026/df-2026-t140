@@ -7,7 +7,7 @@ const SHOW_DELAY_MS = 1200
 const keyOf = (tripId: string) => `shiori-coach-seen:${tripId}`
 
 /**
- * しおりの入口の案内（左上のルートボタンを指す。ShioriCoachMark）を出すか。
+ * しおりの入口の案内（左上のしおりボタンを指す。ShioriCoachMark）を出すか。
  * その旅のしおりに場所が入っていて、この端末でまだその旅の案内を済ませていないときに、旅ごとに一度だけ出す。
  * ルートボタンを押す（done）か、しおりを開くと済んだことにする。
  *

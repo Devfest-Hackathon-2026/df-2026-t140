@@ -1,6 +1,6 @@
 // ページを開く通信だけを扱い、失敗したらオフラインの案内を出す。
 // 地図、Firestore、Functions の通信には触らない（Google Maps の内容はキャッシュしない）。
-const CACHE = 'tabimusubi-offline-v1'
+const CACHE = 'tabimusubi-offline-v2'
 const OFFLINE_URL = '/offline.html'
 
 self.addEventListener('install', (event) => {

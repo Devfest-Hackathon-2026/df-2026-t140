@@ -1,0 +1,149 @@
+/* しおりの宿の枠。まだ決まっていない夜は、点線で囲んで場所を空けておく */
+.slot {
+  display: grid;
+  gap: var(--space-2);
+  margin: var(--space-1) 0 var(--space-2);
+  padding: var(--space-2) var(--space-3) var(--space-3) 6px;
+  border: var(--border-width) dashed var(--color-border);
+  border-radius: var(--radius-m);
+}
+
+/* まだ決まっていない夜の、たたんだ形。丸、名前、右に「＋ 決める」の 1 行（UI/UX レビューの S-1） */
+.folded {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: 6px var(--space-2) 6px 6px;
+}
+
+.folded .name {
+  flex: 1;
+  min-width: 0;
+}
+
+.unfold {
+  flex: none;
+}
+
+.title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin: 0;
+}
+
+/* しおりの行の丸と同じ大きさ。中身がまだないので、点線の丸にする */
+.dot {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: var(--border-width) dashed var(--color-border);
+  border-radius: 50%;
+  /* しおりの丸をつなぐ線（widgets/route-timeline）が、点線の丸の中に透けないよう塗る */
+  background: var(--color-surface);
+  color: var(--color-text-sub);
+}
+
+.text {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.name {
+  font-weight: var(--font-weight-heading);
+}
+
+.sub {
+  color: var(--color-text-sub);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  /* 丸の右（地名の始まり）にそろえる */
+  padding-left: calc(44px + var(--space-3));
+}
+
+/* 「自分で書く」を押したあとの、よくある過ごし方の候補。横に並べ、入りきらなければ折り返す */
+.examples {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0 0 0 calc(44px + var(--space-3));
+  list-style: none;
+}
+
+.example {
+  min-height: 34px;
+  padding: 0 var(--space-3);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-heading);
+  cursor: pointer;
+}
+
+.picked {
+  border-color: var(--color-route);
+  background: var(--color-route-soft);
+  color: var(--color-route-edge);
+}
+
+/* 過ごし方を書く欄と、ふつうの大きさの「決める」 */
+.field {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-left: calc(44px + var(--space-3));
+}
+
+.input {
+  flex: 1;
+  min-width: 0;
+  min-height: 40px;
+  padding: 0 var(--space-3);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-s);
+  background: var(--color-surface);
+  color: var(--color-text);
+  /* 16px より小さいと、iPhone で入力のときに画面が拡大される */
+  font: inherit;
+  font-size: 16px;
+  font-weight: var(--font-weight-bold);
+}
+
+.input:focus {
+  outline: none;
+  border-color: var(--color-go);
+}
+
+/* 宿を取らないと決めた夜。線のない灰色の行に、書いた言葉を出す */
+.decided {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin: var(--space-1) 0 var(--space-2);
+  padding: 6px var(--space-2) 6px 6px;
+  border-radius: var(--radius-m);
+  background: var(--color-surface-sunken);
+}
+
+.solid {
+  border-style: solid;
+  background: var(--color-surface);
+}
+
+.change {
+  flex: none;
+  margin-left: auto;
+}

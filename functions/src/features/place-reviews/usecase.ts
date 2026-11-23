@@ -28,7 +28,8 @@ export async function placeReviews(ports: PlaceReviewsPorts, input: PlaceReviews
   if (!pin) return { status: 'not-found' }
   // 開発環境（Emulator）では Places を呼ばず、開発用の見本を返す（手元で見た目を確かめるため。合言葉も見ない）。
   // 写真は、建った場所（場所の情報 S12）だけ。候補の場所カードには付けない（本番と同じ）
-  if (ports.placesApi.sampleMode()) return { status: 'reviews', ...sampleReviews(pin.name, pin.status === 'done') }
+  const language = input.language ?? 'ja'
+  if (ports.placesApi.sampleMode()) return { status: 'reviews', ...sampleReviews(pin.name, pin.status === 'done', language) }
   // 候補（と建築に失敗したピン）は、まだ Places で確かめていないので、名前で探して口コミを出す（#203）
   const candidate = !pin.placeId && (pin.status === 'candidate' || pin.status === 'failed')
   // 建った場所でも、Places で確かめていなければ（建てた人が合言葉を通していない、見つからなかった）名前で探す（#279）
@@ -38,7 +39,8 @@ export async function placeReviews(ports: PlaceReviewsPorts, input: PlaceReviews
   // place_id は、場所の ID だけを受け取るテキスト検索（無料）で探す。保存しない（位置ごと確かめて書くのは verify-place だけ）
   const placeId = pin.placeId ?? (await ports.placesApi.findPlaceId({ text: placeQuery(pin), near: pin.location }))
   if (!placeId) return { status: 'unavailable' }
-  // 候補の場所カードには写真を出さないので、写真は取らない（Place Photo の回数を使わない）
-  const found = await ports.placesApi.reviews(placeId, { photo: !candidate })
+  // 候補の場所カードには写真を出さないので、写真は取らない（Place Photo の回数を使わない）。
+  // 口コミは開いた人の表示言語で聞く（英語なら Places が訳した文。言語を変えても呼ぶのは同じ 1 回）
+  const found = await ports.placesApi.reviews(placeId, { photo: !candidate, language })
   return found ? { status: 'reviews', ...found } : { status: 'unavailable' }
 }

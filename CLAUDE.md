@@ -8,7 +8,8 @@ DevFest GDGoC Japan Hackathon 2026 の開発用リポジトリ。友人グルー
 
 違反は失格や事故につながる。hooks、git hooks、CI が止めるので、止められたら表示された理由と代わりの手順に従う。迂回しない（`docs/process/work.md`）。
 
-- main では編集も commit もしない。AI は commit、push、PR の作成、レビュー（`/review-pr`）までをしてよい。会話で人と合意した作業の PR は、ドラフトでなく、CI がすべて通り、main とぶつからず、別のコンテキストのレビュー役が APPROVE したら、人の merge 指示を待たずに AI が merge してよい（ガードが条件を確かめる。`todo/humans/2026-11-07-merge-on-chat-agreement.md`）。人が「merge しない」と言った作業と、合意していない作業は merge せず、レビューで止めて人に伝える。作業宣言だけの PR（docs/work/ だけ）は別で、`npm run work -- declare` が指示なしで main に入れる
+- main では編集も commit もしない。AI は commit、push、PR の作成、レビュー（`/review-pr`）までをしてよい。会話で人と合意した作業の PR は、作業中（ドラフトか「作業中」ラベル）でなく、先頭の commit の手元の確認の記録があり、main とぶつからず、別のコンテキストのレビュー役が APPROVE したら、人の merge 指示を待たずに AI が merge してよい（ガードが条件を確かめる。`todo/humans/2026-11-07-merge-on-chat-agreement.md`）。人が「merge しない」と言った作業と、合意していない作業は merge せず、レビューで止めて人に伝える。作業宣言だけの PR（docs/work/ だけ）は別で、`npm run work -- declare` が指示なしで main に入れる
+- 作業を終える前に、手元で CI と同じ確認を必ず通す（`npm run work -- finish` が走らせる。単体は `npm run verify:local`）。merge の条件は CI ではなくこの記録で、`npm run verify` は本番への反映（deploy ブランチ）のときに Deploy がまとめて確かめる（ハーネスのチェックは手元の記録だけ。Lazyturtle0852 の決定、2026-11-22。`docs/process/work.md` の「手元の確認」）
 - 本番へ出すのは、人が main を `deploy` ブランチへ反映したときだけ（main への merge では出ない。かめの決定、`todo/humans/2026-11-07-deploy-branch.md`）。AI は deploy に push も commit も merge もしない（ガードが止める）。本番に出したいときは人に頼む。手順は `docs/process/setup.md` の「本番への反映」
 - 作業の始めに main の最新を取り込む（セッションの始めのフックが自動で行う。フックのない AI は `npm run work -- sync`）。開発タスクはすべて GitHub Issue に起票し（`npm run work -- issue`）、作業の前に `npm run work -- start <種類>/<内容> [--issue <番号>]` でブランチと作業宣言を作り、`npm run work -- declare` で宣言を main に入れて PR を作る（Issue なしで始めた作業も `declare` が自動で Issue を起票して紐づける）。区切りごとに commit して push する
 - 例外：todo/humans/ だけを変えるとき（判断を頼む・記録する）は、PR を作らず main に直接入れる。`npm run human -- done` は記録して main まで入れ、`npm run human -- publish` は今のブランチのまま todo/humans/ の変更を main へ入れる（人の git の操作は要らない）。ほかのファイルを混ぜない（`docs/process/work.md`）
@@ -36,20 +37,21 @@ DevFest GDGoC Japan Hackathon 2026 の開発用リポジトリ。友人グルー
 
 - 案で迷ったら、企画書の目的（全員が主人公、幹事に集中させない）に照らして最適と思われる案で実装し、PR の説明に「仮に選んだこと」として書く。人が決めるべきことは `todo/humans/` にも書く
 - ハーネスが人に確認を求める操作（artifact のコピー、ガードレールの変更）も止めずに進む（トレースに残る）。変えたことは PR に書く
-- 期間中も人に残すもの：費用、有料 API、.env、権限、本番への反映（deploy ブランチ）と手元からのデプロイ。merge はガードの条件（CI、レビューの承認）を満たし、会話で人と合意した作業だけ（`todo/humans/2026-11-07-merge-on-chat-agreement.md`）。ガードは期間中も止める
+- 期間中も人に残すもの：費用、有料 API、.env、権限、本番への反映（deploy ブランチ）と手元からのデプロイ。merge はガードの条件（手元の確認の記録、レビューの承認）を満たし、会話で人と合意した作業だけ（`todo/humans/2026-11-07-merge-on-chat-agreement.md`）。ガードは期間中も止める
 
 ## 費用を出さない
 
 - Cloud の Gemini（Vertex AI）は、チームが許可するまで呼ばない。本物の Gemini はローカルの agy で試す（`docs/process/dev-plan.md`）
 - Google Maps は API ごとに 1 日の上限をかけてある（`docs/process/setup.md`）。上限を上げない。0 回にした API を使う実装をしない
 
-## PR を出したらデモ動画
+## 画面を変えたらスクリーンショットか動画
 
-`web/` の見た目や操作が変わる PR を出したら、続けて `demo-video` スキルで動画を撮り、その PR に添付する。
+`web/` の見た目や操作が変わる作業では、見た目を確かめられるものを報告と PR に添える。基本はどちらか 1 つにする（かめの決定、2026-11-16）。
 
-- 撮る前にユーザーに確認しなくてよい。PR へのコメント投稿だけは、スキルの手順どおり投稿の直前に確認する。夜間など確認できる人がいないときは、動画を作って添付コマンドを PR の説明に書いておく
-- 撮影の条件（起動、画面の種類、3 人の計画の撮り方、声）は `.claude/demo-video.md`
-- バックエンドだけ・文書だけ・見た目が変わらないリファクタの PR では撮らない
+- 1 つの画面の見た目が変わるときは、スクリーンショット。変わった幅（スマホの 390px、PC の幅など）ごとに撮る。ターミナルには画像を埋め込めないので、報告の最後に画像の絶対パスを並べる。PR には `gh pr comment <番号> --body-file <説明> --attach <画像>` で画像そのものを添付する（パスを書くだけでは PR で見えない）。この添付は確認なしでしてよい
+- 画面をまたぐ流れや、動き・操作が変わるときは、`demo-video` スキルで動画を撮って PR に添付する。撮る前にユーザーに確認しなくてよい。PR へのコメント投稿だけは、スキルの手順どおり投稿の直前に確認する。夜間など確認できる人がいないときは、動画を作って添付コマンドを PR の説明に書いておく。撮影の条件は `.claude/demo-video.md`
+- 確かめるために撮ったものも捨てずに渡す。撮ったのに渡さない、を避ける
+- バックエンドだけ・文書だけ・見た目が変わらないリファクタの PR では、どちらも撮らない
 
 ## 正本（グラウンドルール）
 

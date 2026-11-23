@@ -143,17 +143,17 @@
 
 /*
  * 「建築完了」の印。押せないので、押せるもの（色の塗り、縁、下の厚み）の形にしない（#225）。
- * 白地に緑の文字と、緑の丸のチェック。色だけに頼らず、文字とチェックで完了を伝える
+ * 白地に緑の文字と、緑の丸のチェック。色だけに頼らず、文字とチェックで完了を伝える。
+ * 左右と上下の位置は MapBuilding.tsx が決める（まとめた数の札が出ているときは、札の右へずらす。lib/declutter.ts の doneLeft）
  */
 .done {
   position: absolute;
-  left: 18px;
   display: flex;
   align-items: center;
   gap: 4px;
   width: max-content;
   padding: 2px 8px 2px 3px;
-  border-radius: 8px;
+  border-radius: var(--radius-s);
   background: var(--color-surface);
   color: var(--color-go-edge);
   font-family: var(--font-family);

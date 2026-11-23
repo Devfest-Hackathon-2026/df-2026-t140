@@ -1,0 +1,1 @@
+export { shioriWeather } from './handler'

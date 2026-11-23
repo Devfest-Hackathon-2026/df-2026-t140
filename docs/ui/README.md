@@ -10,7 +10,7 @@
 | `web/src/features/create-trip/` | api・model・ui に分けた見本 |
 | `web/src/app/styles/tokens.css` | 見た目の変数（色、角丸、フォント、影）。部品はここの変数だけを使う |
 
-画面の構成と見た目（A＋C に決定）は `screen-flow/screenshots/` の画像と [design-options/README.md](screen-flow/design-options/README.md) で確かめます。原本は [Claude Design](https://claude.ai/artifact/43SzUgCqyFxMaFenBRPp5v) です。`screen-flow/` の `.dc.html` はブラウザで直接開いても表示されず、直接編集もしません。
+画面の構成と見た目（A＋C に決定）は `screen-flow/screenshots/` の画像と [design-options/README.md](screen-flow/design-options/README.md) で確かめます。原本は [Claude Design](https://claude.ai/artifact/43SzUgCqyFxMaFenBRPp5v) です。コレクション（2026-11-21）の画面の案は、別のキャンバス（https://claude.ai/artifact/CtaMT75scBbLDrf8NTNr9h ）と、もとのホワイトボードの写真（`collection/whiteboard-2026-11-21.jpg`）にあります。`screen-flow/` の `.dc.html` はブラウザで直接開いても表示されず、直接編集もしません。
 
 ## 画面とスライスの対応（目安）
 
@@ -25,9 +25,29 @@
 | S05 候補ピン・場所カード | `widgets/place-card`、`features/build-model` |
 | S07 建物が建つ | `widgets/trip-map`、`entities/model3d` |
 | S11〜S13 しおり、場所の情報、シートを閉じた状態 | `pages/trip-map`（ルートボタンで切り替え）、`widgets/route-timeline`、`widgets/place-sheet` |
+| S14 決まったしおり | `pages/final-shiori`（別の画面。中身は `entities/trip` の `shioriBookOf` が今のしおりから作る）、`widgets/shiori-head` の `ShioriExportMenu`（書き出し）、`features/export-shiori-pdf`（PDF）、`features/export-calendar`（Google カレンダー）、`features/confirm-shiori`（確定と取り消し。確定のボタンは S11 のシート） |
 | M01・M02 メニュー、旅の基本情報 | `pages/menu`、`pages/trip-info` |
+| コレクション（過去の旅の建物を旅ごとに並べる。企画書「ユーザー体験」4-2） | `pages/collection`、`widgets/collection`（過去の旅と建物を読む `useCollection`、建物の詳細 `BuildingFloat`）、`widgets/home-footer`（ホームとコレクションの下のフッター） |
+| 日本コレクション（過去の旅の建物を日本全体の地図に並べる。同 4-3） | `pages/collection-map`（地図は `widgets/trip-map` の `TripMap` を使う）、`widgets/collection` |
+| チュートリアル（初めて開いたとき。ホームの「使い方を見る」からも開く） | `widgets/tutorial`（中身は `config/slides.ts` と `assets/`。直し方は下の「チュートリアルを直す」） |
 
 画面が変わる作業は、スマホの幅（390×844）で確かめます。
+
+## チュートリアルを直す
+
+初めて開いた端末で最初に出るチュートリアルは、`web/src/widgets/tutorial/` にあります。中身は `config/slides.ts` の一覧（SLIDES）と `assets/` の画像だけで決まり、上の棒の本数や最後の「はじめる！」は一覧の長さから自動で決まります。
+
+| したいこと | 直す所 |
+| --- | --- |
+| 文言を直す | `config/slides.ts` の、その 1 枚の label（小さな見出し）と text（本文） |
+| 画像を差し替える | `assets/` の同じ名前の画像を置き換える（縦長のスマホの画面。今の画像は 390×844 の 2 倍、JPEG） |
+| 1 枚足す | 画像を `assets/` に置き、`config/slides.ts` に import を 1 行と、SLIDES に 1 つ足す |
+| 1 枚消す・並べ替える | SLIDES からその 1 つ（と import、画像）を消す。順番は SLIDES の並びのとおり |
+| 文言の箱の位置 | その 1 枚の caption を top か bottom にする（背景の見せたい所に重ならないほう） |
+
+- 今の画像は、開発環境の地図なしの表示で撮っています（本物の Google マップは写っていません）。開発のときだけ出る注意書きは隠して撮りました
+- もう一度出して確かめるには、ブラウザの保存データから `tutorial-seen` を消すか、ホームの「使い方を見る」を押します
+- 複数人シミュレーション（/dev/sim）の中の画面には出ません
 
 ## 画面の文言
 

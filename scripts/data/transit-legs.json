@@ -1,0 +1,581 @@
+{
+ "about": "しおりの電車・バスの見積もり（functions/src/domain/transit.ts）の答え合わせの区間。正解は昼間の door-to-door の所要時間（最初の便を待つ時間は含まない）で、事業者・施設の公式の時刻表とアクセス案内、自治体・観光協会、Wikipedia から組み立てた。Google マップと乗換案内サイトの検索結果は使っていない。実験の報告：https://claude.ai/artifact/SMziadbQQhUX29sAeAP4jG。longDistance の区間（新幹線の往復）は現地の移動ではないので、平均の誤差に入れない",
+ "legs": [
+  {
+   "id": 1,
+   "from": "浅草寺",
+   "to": "東京スカイツリー",
+   "fromLatLng": [
+    35.71477,
+    139.79665
+   ],
+   "toLatLng": [
+    35.71005,
+    139.81071
+   ],
+   "truthMinutes": 16,
+   "confidence": "medium",
+   "longDistance": false
+  },
+  {
+   "id": 2,
+   "from": "明治神宮",
+   "to": "東京タワー",
+   "fromLatLng": [
+    35.67639,
+    139.69944
+   ],
+   "toLatLng": [
+    35.65858,
+    139.74543
+   ],
+   "truthMinutes": 30,
+   "confidence": "medium",
+   "longDistance": false
+  },
+  {
+   "id": 3,
+   "from": "上野動物園",
+   "to": "築地場外市場",
+   "fromLatLng": [
+    35.71534,
+    139.7689
+   ],
+   "toLatLng": [
+    35.66539,
+    139.77047
+   ],
+   "truthMinutes": 27,
+   "confidence": "medium",
+   "longDistance": false
+  },
+  {
+   "id": 4,
+   "from": "渋谷スクランブル交差点",
+   "to": "ダイバーシティ東京 プラザ（お台場）",
+   "fromLatLng": [
+    35.6595,
+    139.70051
+   ],
+   "toLatLng": [
+    35.62532,
+    139.77588
+   ],
+   "truthMinutes": 28,
+   "confidence": "medium",
+   "longDistance": false
+  },
+  {
+   "id": 5,
+   "from": "新宿御苑",
+   "to": "東京ディズニーランド",
+   "fromLatLng": [
+    35.68507,
+    139.70955
+   ],
+   "toLatLng": [
+    35.63266,
+    139.88142
+   ],
+   "truthMinutes": 56,
+   "confidence": "medium",
+   "longDistance": false
+  },
+  {
+   "id": 6,
+   "from": "新宿駅",
+   "to": "鶴岡八幡宮（鎌倉）",
+   "fromLatLng": [
+    35.69092,
+    139.70026
+   ],
+   "toLatLng": [
+    35.32605,
+    139.55639
+   ],
+   "truthMinutes": 68,
+   "confidence": "medium",
+   "longDistance": false
+  },
+  {
+   "id": 7,
+   "from": "鶴岡八幡宮（鎌倉）",
+   "to": "江島神社（江の島）",
+   "fromLatLng": [
+    35.32605,
+    139.55639
+   ],
+   "toLatLng": [
+    35.30049,
+    139.47954
+   ],
+   "truthMinutes": 55,
+   "confidence": "medium",
+   "longDistance": false
+  },
+  {
+   "id": 8,
+   "from": "箱根湯本駅",
+   "to": "大涌谷",
+   "fromLatLng": [
+    35.2332,
+    139.10347
+   ],
+   "toLatLng": [
+    35.24442,
+    139.01958
+   ],
+   "truthMinutes": 68,
+   "confidence": "medium",
+   "longDistance": false
+  },
+  {
+   "id": 9,
+   "from": "東京駅",
+   "to": "川越 時の鐘",
+   "fromLatLng": [
+    35.68124,
+    139.76712
+   ],
+   "toLatLng": [
+    35.92348,
+    139.48334
+   ],
+   "truthMinutes": 75,
+   "confidence": "low",
+   "longDistance": false
+  },
+  {
+   "id": 10,
+   "from": "日光東照宮",
+   "to": "華厳の滝",
+   "fromLatLng": [
+    36.75764,
+    139.59911
+   ],
+   "toLatLng": [
+    36.73801,
+    139.50197
+   ],
+   "truthMinutes": 55,
+   "confidence": "low",
+   "longDistance": false
+  },
+  {
+   "id": 11,
+   "from": "横浜中華街（善隣門）",
+   "to": "横浜赤レンガ倉庫",
+   "fromLatLng": [
+    35.44308,
+    139.6441
+   ],
+   "toLatLng": [
+    35.4524,
+    139.64292
+   ],
+   "truthMinutes": 18,
+   "confidence": "medium",
+   "longDistance": false
+  },
+  {
+   "id": 12,
+   "from": "新宿駅",
+   "to": "河口湖駅",
+   "fromLatLng": [
+    35.69092,
+    139.70026
+   ],
+   "toLatLng": [
+    35.49853,
+    138.76864
+   ],
+   "truthMinutes": 110,
+   "confidence": "medium",
+   "longDistance": false
+  },
+  {
+   "id": 13,
+   "from": "京都駅",
+   "to": "伏見稲荷大社",
+   "fromLatLng": [
+    34.98546,
+    135.75776
+   ],
+   "toLatLng": [
+    34.96694,
+    135.77306
+   ],
+   "truthMinutes": 10,
+   "confidence": "high",
+   "longDistance": false
+  },
+  {
+   "id": 14,
+   "from": "金閣寺",
+   "to": "清水寺",
+   "fromLatLng": [
+    35.0394,
+    135.72936
+   ],
+   "toLatLng": [
+    34.99483,
+    135.785
+   ],
+   "truthMinutes": 71,
+   "confidence": "medium",
+   "longDistance": false
+  },
+  {
+   "id": 15,
+   "from": "清水寺",
+   "to": "渡月橋（嵐山）",
+   "fromLatLng": [
+    34.99483,
+    135.785
+   ],
+   "toLatLng": [
+    35.01281,
+    135.67772
+   ],
+   "truthMinutes": 54,
+   "confidence": "medium",
+   "longDistance": false
+  },
+  {
+   "id": 16,
+   "from": "京都駅",
+   "to": "東大寺（奈良）",
+   "fromLatLng": [
+    34.98546,
+    135.75776
+   ],
+   "toLatLng": [
+    34.68897,
+    135.83983
+   ],
+   "truthMinutes": 58,
+   "confidence": "medium",
+   "longDistance": false
+  },
+  {
+   "id": 17,
+   "from": "道頓堀（戎橋）",
+   "to": "大阪城天守閣",
+   "fromLatLng": [
+    34.66906,
+    135.50136
+   ],
+   "toLatLng": [
+    34.68722,
+    135.52583
+   ],
+   "truthMinutes": 35,
+   "confidence": "low",
+   "longDistance": false
+  },
+  {
+   "id": 18,
+   "from": "大阪城天守閣",
+   "to": "ユニバーサル・スタジオ・ジャパン",
+   "fromLatLng": [
+    34.68722,
+    135.52583
+   ],
+   "toLatLng": [
+    34.66472,
+    135.43306
+   ],
+   "truthMinutes": 49,
+   "confidence": "medium",
+   "longDistance": false
+  },
+  {
+   "id": 19,
+   "from": "三ノ宮駅（神戸）",
+   "to": "姫路城",
+   "fromLatLng": [
+    34.69484,
+    135.19494
+   ],
+   "toLatLng": [
+    34.83938,
+    134.6941
+   ],
+   "truthMinutes": 62,
+   "confidence": "medium",
+   "longDistance": false
+  },
+  {
+   "id": 20,
+   "from": "東大寺（奈良）",
+   "to": "法隆寺",
+   "fromLatLng": [
+    34.68897,
+    135.83983
+   ],
+   "toLatLng": [
+    34.61474,
+    135.73417
+   ],
+   "truthMinutes": 54,
+   "confidence": "medium",
+   "longDistance": false
+  },
+  {
+   "id": 21,
+   "from": "高山陣屋",
+   "to": "白川郷（荻町合掌造り集落）",
+   "fromLatLng": [
+    36.13969,
+    137.25753
+   ],
+   "toLatLng": [
+    36.2569,
+    136.9064
+   ],
+   "truthMinutes": 65,
+   "confidence": "medium",
+   "longDistance": false
+  },
+  {
+   "id": 22,
+   "from": "金沢駅",
+   "to": "兼六園",
+   "fromLatLng": [
+    36.57828,
+    136.64775
+   ],
+   "toLatLng": [
+    36.56214,
+    136.6625
+   ],
+   "truthMinutes": 20,
+   "confidence": "medium",
+   "longDistance": false
+  },
+  {
+   "id": 23,
+   "from": "兼六園",
+   "to": "金沢21世紀美術館",
+   "fromLatLng": [
+    36.56214,
+    136.6625
+   ],
+   "toLatLng": [
+    36.56083,
+    136.65819
+   ],
+   "truthMinutes": 8,
+   "confidence": "medium",
+   "longDistance": false
+  },
+  {
+   "id": 24,
+   "from": "河口湖駅",
+   "to": "新倉山浅間公園（忠霊塔）",
+   "fromLatLng": [
+    35.49822,
+    138.76863
+   ],
+   "toLatLng": [
+    35.50119,
+    138.80139
+   ],
+   "truthMinutes": 40,
+   "confidence": "medium",
+   "longDistance": false
+  },
+  {
+   "id": 25,
+   "from": "松本城",
+   "to": "上高地 河童橋",
+   "fromLatLng": [
+    36.23889,
+    137.96917
+   ],
+   "toLatLng": [
+    36.24869,
+    137.63797
+   ],
+   "truthMinutes": 115,
+   "confidence": "medium",
+   "longDistance": false
+  },
+  {
+   "id": 26,
+   "from": "博多駅",
+   "to": "太宰府天満宮",
+   "fromLatLng": [
+    33.5898,
+    130.42068
+   ],
+   "toLatLng": [
+    33.52143,
+    130.535
+   ],
+   "truthMinutes": 53,
+   "confidence": "high",
+   "longDistance": false
+  },
+  {
+   "id": 27,
+   "from": "長崎駅",
+   "to": "グラバー園",
+   "fromLatLng": [
+    32.75275,
+    129.86906
+   ],
+   "toLatLng": [
+    32.73444,
+    129.86889
+   ],
+   "truthMinutes": 32,
+   "confidence": "medium",
+   "longDistance": false
+  },
+  {
+   "id": 28,
+   "from": "別府駅",
+   "to": "由布院駅",
+   "fromLatLng": [
+    33.27954,
+    131.50026
+   ],
+   "toLatLng": [
+    33.26262,
+    131.35509
+   ],
+   "truthMinutes": 56,
+   "confidence": "high",
+   "longDistance": false
+  },
+  {
+   "id": 29,
+   "from": "広島駅",
+   "to": "原爆ドーム",
+   "fromLatLng": [
+    34.39775,
+    132.47547
+   ],
+   "toLatLng": [
+    34.39556,
+    132.45361
+   ],
+   "truthMinutes": 20,
+   "confidence": "medium",
+   "longDistance": false
+  },
+  {
+   "id": 30,
+   "from": "原爆ドーム",
+   "to": "嚴島神社（宮島）",
+   "fromLatLng": [
+    34.39556,
+    132.45361
+   ],
+   "toLatLng": [
+    34.29602,
+    132.31989
+   ],
+   "truthMinutes": 60,
+   "confidence": "high",
+   "longDistance": false
+  },
+  {
+   "id": 31,
+   "from": "伊勢神宮 外宮",
+   "to": "伊勢神宮 内宮",
+   "fromLatLng": [
+    34.48724,
+    136.70293
+   ],
+   "toLatLng": [
+    34.455,
+    136.72518
+   ],
+   "truthMinutes": 30,
+   "confidence": "medium",
+   "longDistance": false
+  },
+  {
+   "id": 32,
+   "from": "札幌駅",
+   "to": "小樽運河（浅草橋）",
+   "fromLatLng": [
+    43.06861,
+    141.35078
+   ],
+   "toLatLng": [
+    43.19972,
+    141.00167
+   ],
+   "truthMinutes": 43,
+   "confidence": "medium",
+   "longDistance": false
+  },
+  {
+   "id": 33,
+   "from": "仙台駅",
+   "to": "瑞巌寺（松島）",
+   "fromLatLng": [
+    38.26028,
+    140.88222
+   ],
+   "toLatLng": [
+    38.37218,
+    141.0596
+   ],
+   "truthMinutes": 50,
+   "confidence": "medium",
+   "longDistance": false
+  },
+  {
+   "id": 34,
+   "from": "那覇空港",
+   "to": "首里城公園",
+   "fromLatLng": [
+    26.19583,
+    127.64583
+   ],
+   "toLatLng": [
+    26.21814,
+    127.71689
+   ],
+   "truthMinutes": 47,
+   "confidence": "high",
+   "longDistance": false
+  },
+  {
+   "id": 35,
+   "from": "道後温泉本館",
+   "to": "松山城（ロープウェイ東雲口）",
+   "fromLatLng": [
+    33.85197,
+    132.78622
+   ],
+   "toLatLng": [
+    33.84444,
+    132.77194
+   ],
+   "truthMinutes": 20,
+   "confidence": "medium",
+   "longDistance": false
+  },
+  {
+   "id": 36,
+   "from": "東京駅",
+   "to": "京都駅",
+   "fromLatLng": [
+    35.68083,
+    139.76694
+   ],
+   "toLatLng": [
+    34.98546,
+    135.75776
+   ],
+   "truthMinutes": 140,
+   "confidence": "high",
+   "longDistance": true
+  }
+ ]
+}

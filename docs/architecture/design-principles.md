@@ -147,7 +147,7 @@ Firestore のトリガーは「少なくとも 1 回」届き、順番も保証�
 
 - 呼び出し口の型は `ports/gemini.ts` の 1 つ（`GeminiPort`、`GeminiTask`）。実体は `adapters/gemini/index.ts` で、環境変数 `GEMINI_PROVIDER` で選ぶ（何も書かなければ固定の応答 `stub`。手元の agy は `adapters/gemini/agy.ts`、Cloud の Gemini は `adapters/gemini/vertex.ts`）。機能の handler が、この実体を logic・usecase に渡す
 - agy は Flash と Argon の仕事をつないである。回数の上限（Flash は `AGY_MAX_CALLS`、既定 30。Argon は `AGY_MAX_ARGON_CALLS`、既定 20 で別に数える。判断は `domain/agyBudget.ts`、数えるのは `adapters/gemini/agy.ts`）を超えると固定の応答に戻る
-- vertex（Cloud の Gemini、費用がかかる唯一の経路）は、usecase が付けた印（`GeminiPermit`）があるときだけ呼ぶ。印は、頼んだ人が合言葉を通していて（`aiAccess/{uid}`）、回数が上限の中のときだけ作る（関所の型は `ports/aiGate.ts`、実体は `adapters/aiGate.ts`、判断は `domain/geminiBudget.ts`）。印がなければ固定の応答に戻る。上限は Flash（場所の候補としおりのルートで分け合う）が累計 300 回（`usage/flash`）、Argon（模型）が 1 日 20 回・累計 80 回（`usage/argon`、日付は日本時間）。「頼んだ人」は、場所の候補では希望を書いた人、しおりのルートでは建った場所の持ち主の誰か、模型では建てた人か希望を書いた人
+- vertex（Cloud の Gemini、費用がかかる唯一の経路）は、usecase が付けた印（`GeminiPermit`）があるときだけ呼ぶ。印は、頼んだ人が合言葉を通していて（`aiAccess/{uid}`）、回数が上限の中のときだけ作る（関所の型は `ports/aiGate.ts`、実体は `adapters/aiGate.ts`、判断は `domain/geminiBudget.ts`）。印がなければ固定の応答に戻る。上限は Flash（場所の候補としおりのルートで分け合う）が累計 300 回（`usage/flash`）、Argon（模型）が 1 日 20 回・累計 300 回（`usage/argon`、日付は日本時間）。「頼んだ人」は、場所の候補では希望を書いた人、しおりのルートでは建った場所の持ち主の誰か、模型では建てた人か希望を書いた人
 - Cloud の Gemini（vertex）を本番で有効にするかどうかは人が決める（`todo/humans/2026-11-07-vertex-gemini-passphrase.md`。ルートと模型も本物にする決定は `todo/humans/2026-11-07-vertex-routes-model.md`）。AI は使う設定にしない（ガードが止める）
 - Gemini を呼ぶ経路は、ログインの確認と回数の上限（技術構成の「費用の上限」）を必ず通す。上限の判定は domain に置き、usecase で数える
 

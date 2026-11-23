@@ -19,7 +19,7 @@ import { generateWithVertex } from './vertex'
 //
 // 【費用】vertex は、usecase が付けた印（GeminiPermit）があるときだけ呼ぶ。印は「頼んだ人が合言葉を通している」と
 // 「回数の上限の中」（ports/aiGate.ts、domain/geminiBudget.ts）を確かめたときだけ作る。印がなければ固定の応答に戻す。
-// Flash は累計 300 回、Argon は 1 日 20 回・累計 80 回（技術構成の「費用の上限」。design-principles の cost/gemini-guarded）。
+// Flash は累計 300 回、Argon は 1 日 20 回・累計 300 回（技術構成の「費用の上限」。design-principles の cost/gemini-guarded）。
 // agy は開発者のアカウントのクォータで動き、agy.ts の中で 1 日の回数（既定は Flash 30、Argon 20）を数えて止める。
 // 本番で vertex にするかどうかは人が決める（todo/humans/2026-11-07-vertex-gemini-passphrase.md、
 // ルートと模型は todo/humans/2026-11-07-vertex-routes-model.md）。AI は設定しない。

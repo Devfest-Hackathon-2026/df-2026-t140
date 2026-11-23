@@ -11,10 +11,9 @@ brew install mise
 mise trust && mise install   # .tool-versions の Node と Java を入れる
 mise exec -- npm run setup
 npx firebase login           # Emulator が Web の設定を取得するのに必要
-gh auth refresh -h github.com -s project   # カンバン（GitHub Projects）の「人間待ち」を動かすのに必要
 ```
 
-最後の行は、`npm run human` が人の判断待ちをカンバンに載せるための権限です。付けなくても todo/humans/ への記録はできますが、カンバンは動かず警告が出ます（[todo/humans/README.md](../../todo/humans/README.md)「カンバンとの連動」）。
+カンバン（GitHub Projects）は GitHub Actions が動かすので、各自の gh に project の権限は要りません（[work.md](work.md)「カンバン」）。
 
 `mise exec --` を毎回付けたくない場合は、[mise activate](https://mise.jdx.dev/getting-started.html) をシェルに設定します。
 
@@ -45,6 +44,15 @@ mise exec -- npm run dev
 - 地図が出るのは、キーの許可に入っている IP から開いたときだけです（下の「Google Maps」）。入っていなければ地図なしの表示になります。地図の読み込みは 1 日 300 回で、開いた全員の分を数えます
 - HTTP なので、ホーム画面に追加する PWA の確認はできません（本番 URL で行う）
 
+### 2 組目の Emulator（同じ Mac でもう 1 組立てる）
+
+同じ Mac で別の Emulator（ほかの作業の `npm run dev`。セルフホストのランナーで CI を動かしているときは、その CI も）が動いているときは、`mise exec -- npm run dev:alt` で、ポートを全部 10000 ずらした 2 組目を立てます（`scripts/dev-alt.mjs`）。画面は `http://localhost:15173/t/demo-shinshu`、Emulator の画面は `http://localhost:14000` です。止めるときは Ctrl+C。
+
+- ずらすのは、Auth 19099、Firestore 18080（WebSocket 19150）、Functions 15001、Hosting 15002、Storage 19199、Hub 14400、UI 14000、ログ 14500、Eventarc 19299、Cloud Tasks 19499、画面 15173
+- `firebase.json` をもとに `firebase.alt.json`（git に入れない）を作って使います
+- 画面は、開いたポートの 1 万の位で、つなぐ Emulator のずれを決めます（15173 なら 10000、25002 なら 20000。`web/src/shared/api/connect.ts`）。seed、smoke、sim-headless は環境変数 `EMULATOR_PORT_OFFSET=10000` でずらせます
+- 関数を保存しても作り直しません（起動のときに 1 回だけビルドします）
+
 ## プルリクエストを出す前に
 
 ```sh
@@ -53,11 +61,13 @@ mise exec -- npm run verify
 
 lint、本番と同じビルド、Functions の単体テスト、Emulator での確認テストを行います。CI も同じコマンドを実行します。
 
+AI は、作業を終えるときに `npm run verify:local` を通します（`npm run work -- finish` が走らせます）。上の verify に、ハーネスのテストとチェックを足したもので、Emulator はいつもポートを 10000（ふさがっていれば 20000）ずらして走り、通った記録を PR に残します。既定のポートは、ランナーの Deploy に空けておきます（`docs/process/work.md` の「手元の確認」）。
+
 確認テスト（`scripts/smoke.mjs`）は、Firestore のルールも確かめます。メンバーは自分の旅を読み書きできること、メンバーではない人は他人の旅を読めないこと、ピンとルート案は端末から書けないこと、投票が 1 人 1 票であること、です。データの形（画面は `web/src/entities/<データ>/model/types.ts`、Functions は `functions/src/domain/<データ>.ts`）、ルール（`firestore.rules`）、確認テストは、そろえて変えます。
 
 ## 本番への反映
 
-`main` は開発用です。プルリクエストを `main` にマージしても本番は変わらず、CI（`.github/workflows/ci.yml`）が `npm run verify` を通すだけです。本番へ出すのは、人が `main` を `deploy` ブランチへ反映したときだけです（かめの決定、`todo/humans/2026-11-07-deploy-branch.md`）。
+`main` は開発用です。プルリクエストを `main` にマージしても本番は変わりません。CI（`.github/workflows/ci.yml`）は手で走らせるときだけ動き、`npm run verify` は本番への反映のときに Deploy がまとめて走らせます（2026-11-22）。本番へ出すのは、人が `main` を `deploy` ブランチへ反映したときだけです（かめの決定、`todo/humans/2026-11-07-deploy-branch.md`）。
 
 `deploy` への push で、Deploy（`.github/workflows/deploy.yml`）が次の順に進みます。
 
@@ -69,33 +79,53 @@ lint、本番と同じビルド、Functions の単体テスト、Emulator での
 
 ### 反映のしかた（人）
 
-main の今の中身を、早送りでそのまま deploy へ送ります。
+リポジトリのどこからでも、次の 1 行で反映します。今のブランチと作業中のファイルはそのままです。
 
 ```sh
-git fetch origin
-git push origin origin/main:deploy
+npm run release
 ```
 
-反映はこの早送りの push だけで行います。GitHub の画面で main → deploy のプルリクエストを merge すると、deploy に main にない merge の commit ができ、次の早送りが git と git hooks に止められるためです。
+`npm run release`（`scripts/harness/release.mjs`）は次のことを順に行います。
 
-- 反映の前に、main の最新の CI（Actions の CI）が通っているかを見ます
+1. origin の main と deploy を取ってくる
+2. main の CI が落ちていないかを確かめる。落ちていれば止める。CI のジョブが始まらなかっただけ（GitHub Actions の支払い・利用上限）のときは、落ちたとはみなさず進む（Actions が止まったままなら Deploy も始まらないので、本番には出ない。Actions を戻してから Deploy を走らせ直す。2026-11-21）。走っている途中や、まだ CI で確かめていない変更があるときは、待たずに進む（Deploy が本番へ出す前に同じ verify をかけ、通らなければ本番には出ないため。main の CI を待つと同じ確認を 2 回待つことになる。かめの判断、2026-11-19）
+3. 本番に出る commit の一覧を出し、反映してよいかを聞く（`npm run release -- --yes` で聞かずに進む）
+4. deploy の先頭と main を親にした、main と同じ中身の merge の commit を作り、deploy へ push する
+
+deploy にはこれまでの merge の commit があり、`git push origin origin/main:deploy` の早送りは断られます。release は main を merge した commit を足すだけで、deploy の履歴は書き換えません。GitHub の画面で main → deploy のプルリクエストを merge しても同じ形になりますが、release なら、落ちた CI の確認と一覧の表示まで 1 回で済みます。
+
 - 出し直すだけなら、Actions の Deploy を開き、Run workflow で `deploy` を選びます（ほかのブランチを選ぶと何もしません）
 - deploy への force push（履歴の書き換え）は git hooks が止めます。前の版に戻したいときは、main で戻す変更（`git revert`）を merge してから反映し直します
 
 ### 初回だけ（人）
 
-1. deploy ブランチを作ります。上の `git push origin origin/main:deploy` がそのまま初回の作成になり、Deploy も走ります
-2. Workload Identity の条件を deploy に合わせます。今の条件は main からの実行だけを受け付けるので、変えるまで Deploy は認証で失敗します（`scripts/setup-cicd.sh` は変更後の条件になっています）
+1. deploy ブランチを作ります。`git push origin origin/main:deploy` がそのまま初回の作成になり、Deploy も走ります
+2. Workload Identity の条件を deploy に合わせます。今の条件は main からの実行だけを受け付けるので、変えるまで Deploy は認証で失敗します（`scripts/setup-cicd.sh` は deploy の条件になっていますが、受け付けるのは今のリポジトリ名 konbus/konbu-devfest だけです。下の条件は、移す前の名前も残しています）
 
    ```sh
    gcloud iam workload-identity-pools providers update-oidc konbu-devfest \
      --project konbu-devfest-hackathon-2026 --location global --workload-identity-pool github \
-     --attribute-condition "assertion.repository == 'Lazyturtle0852/konbu-devfest' && assertion.ref == 'refs/heads/deploy'"
+     --attribute-condition "assertion.repository in ['Lazyturtle0852/konbu-devfest', 'konbus/konbu-devfest'] && assertion.ref == 'refs/heads/deploy'"
    ```
 
-3. GitHub のブランチ保護（Settings → Branches、または Rulesets）で、deploy への push と削除を人だけに限ります
+   2026-11-18 にリポジトリを konbus へ移したとき、新しい名前を足した（古い名前も残してある）。サービスアカウント `github-deploy` の `roles/iam.workloadIdentityUser` にも、`attribute.repository/konbus/konbu-devfest` を足してある
+
+3. GitHub のブランチ保護（Settings → Branches、または Rulesets）で、deploy への push と削除を人だけに限ります（2026-11-18 に Free の Organization へ移してからは、private リポジトリでブランチの保護が使えません。deploy は、AI のガード（no-push-deploy）と git hooks（force push の禁止）で守っています。下の「GitHub Actions の実行時間」）
 
 残りの作業は `todo/humans/2026-11-07-deploy-branch-setup.md` にあります。
+
+## GitHub Actions の実行時間（Organization の無料枠）
+
+2026-11-18、個人アカウントの Actions の無料枠と上限を使い切り、ジョブが始まらなくなった（別のリポジトリの長い定期実行が原因）。かめの決定で、リポジトリを Organization `konbus`（Free プラン）へ移し、その無料枠（private で月 2,000 分）で動かしている。
+
+- 移したあとの URL は https://github.com/konbus/konbu-devfest 。古い URL（Lazyturtle0852/konbu-devfest）からも転送されるが、手元は `git remote set-url origin https://github.com/konbus/konbu-devfest.git` で直す
+- Free の Organization の private リポジトリでは、Draft PR、ブランチの保護、複数の担当・レビュアーが使えない。作業中の PR は、ドラフトの代わりに「作業中」ラベルで表す（`npm run work -- declare` が付け、`finish` が外す。merge のガードはラベルの付いた PR を止める）
+- カンバン（Project #1）は持ち主の個人の Project のままで、`KANBAN_TOKEN`（持ち主の classic トークン）で動く
+- 枠を使い切ったときの逃げ道：どのワークフローも `runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}`。リポジトリの変数 `RUNNER` を置くと、そのラベルのセルフホストランナーで動く（人の作業）。2026-11-18 に一時、持ち主の Mac で動かした。そのときに分かった注意：
+  - ランナーは 1 つだとジョブが 1 つずつしか動かない。手元の Emulator と CI の Emulator のポートがぶつかる
+  - ランナーは持ち主のユーザーで動くので、ワークフローで `git config --global` を使うときは `GIT_CONFIG_GLOBAL` をジョブの一時ファイル（`$RUNNER_TEMP`）に向ける（Harness は対応済み。対応前に持ち主の git の名前が harness-ci に書き換わった）
+  - HTTPS を検査するネットワーク（Cato など）では、Java の準備が証明書のエラーで落ちる
+  - ディスクの空きが少ないと、ランナーごと落ちる（10 GB 以上を空けておく）
 
 ## ローカルと本番の対照表
 
@@ -106,7 +136,7 @@ git push origin origin/main:deploy
 | 開く場所 | 自分：http://localhost:5173（開発用。保存ですぐ反映）。ほかの人：Tailscale で Mac を共有して `http://<Mac の Tailscale の IP>:5002`（本番と同じビルド） | https://konbu-devfest-hackathon-2026.web.app 。**今はデプロイが失敗していて段 1〜2 のまま**（IAM の役割の付与待ち。`todo/humans/2026-11-07-deploy-iam-eventarc.md`） |
 | データ | Emulator の中だけ。止めると消える。見本の旅 `demo-shinshu` が自動で入る | Cloud Firestore |
 | 場所の候補（Flash） | 既定は見本の場所の一覧（約 150 か所）。`GEMINI_PROVIDER=agy` で本物の Gemini（1 日 30 回、1 回 20〜40 秒） | 見本の場所の一覧。vertex を有効にすると、合言葉を通した人の分は Cloud の Gemini（下の「本番で本物の Gemini を使う」） |
-| 模型（Argon） | 既定は部品の模型（9 種）。`GEMINI_PROVIDER=agy` で本物の Gemini（1 日 20 回、1 回 40 秒前後） | 部品の模型。vertex を有効にすると、合言葉を通した人の分は Cloud の Gemini（1 日 20 回・累計 80 回） |
+| 模型（Argon） | 既定は部品の模型（9 種）。`GEMINI_PROVIDER=agy` で本物の Gemini（1 日 20 回、1 回 40 秒前後） | 部品の模型。vertex を有効にすると、合言葉を通した人の分は Cloud の Gemini（1 日 20 回・累計 300 回） |
 | ルートの線 | 場所どうしをまっすぐ結ぶ | 今はまっすぐ結ぶ。**道路沿い（Routes API、車）は本番だけで入れる予定**（Routes の利用と、道の線を保存してよいかの規約の確認は人の判断待ち）。公共交通はやめた |
 | しおりの移動時間 | 直線距離からの目安（Routes API は呼ばない） | 保存するのは目安。`ROUTES_API_KEY` を入れると、合言葉を通した人がしおりを開いたときだけ、Routes API（車）の時間を画面に出す（下の「しおりの移動時間（Routes API）」） |
 | 地図 | 本物の地図が出るのは、キーが許可した localhost:5173 と、Mac の Tailscale の IP の 5002・5173 だけ。それ以外は地図なしの表示 | 本番の 2 つのドメインで出る |
@@ -136,7 +166,7 @@ Gemini を呼ぶ入口は `functions/src/adapters/gemini/` の 1 か所です。
 | --- | --- | --- |
 | `stub`（何も書かないとき） | 固定の応答。普段の開発、CI、本番 | 動く |
 | `agy` | ローカルの Functions Emulator から agy（Antigravity CLI）を子プロセスで呼び、本物の Gemini（Flash と Argon）を試す | 動く（下の「本物の Gemini で動かす」）。agy が入っていない環境（CI、本番）でも固定の応答に戻る |
-| `vertex` | Cloud の Gemini（Vertex AI）。費用がかかる唯一の経路。Flash（場所の候補、しおりのルート）と Argon（模型） | 本番で人が有効にする（下の「本番で本物の Gemini を使う」）。合言葉を通した人の分だけ。Flash は累計 300 回、Argon は 1 日 20 回・累計 80 回まで |
+| `vertex` | Cloud の Gemini（Vertex AI）。費用がかかる唯一の経路。Flash（場所の候補、しおりのルート）と Argon（模型） | 本番で人が有効にする（下の「本番で本物の Gemini を使う」）。合言葉を通した人の分だけ。Flash は累計 300 回、Argon は 1 日 20 回・累計 300 回まで |
 
 - 応答には、実際に応答を作ったもの（`provider`）と、固定の応答に戻したか（`fellBack`）が付きます。本物の応答でないものを、本物のように見せないためです
 - 本物の応答は JSON として確かめ、形が違えば 1 回だけやり直し、だめなら固定の応答に戻します。`agy` でもこの処理がそのまま使われます
@@ -147,16 +177,16 @@ Gemini を呼ぶ入口は `functions/src/adapters/gemini/` の 1 か所です。
 
 ### 本番で本物の Gemini を使う（vertex、合言葉）
 
-かめ（Lazyturtle0852）の決定（`todo/humans/2026-11-07-vertex-gemini-passphrase.md`、2026-11-07）。本番で Cloud の Gemini を呼べるのは、合言葉を通した人の分だけで、Flash は累計 300 回、Argon は 1 日 20 回・累計 80 回で止まります。しおりのルートと模型も本物にすることは、かめが費用を含めて決めました（`todo/humans/2026-11-07-vertex-routes-model.md`）。有効にするのは、かめの許可をとってから。AI は有効にしません。
+かめ（Lazyturtle0852）の決定（`todo/humans/2026-11-07-vertex-gemini-passphrase.md`、2026-11-07）。本番で Cloud の Gemini を呼べるのは、合言葉を通した人の分だけで、Flash は累計 300 回、Argon は 1 日 20 回・累計 300 回で止まります。しおりのルートと模型も本物にすることは、かめが費用を含めて決めました（`todo/humans/2026-11-07-vertex-routes-model.md`）。有効にするのは、かめの許可をとってから。AI は有効にしません。
 
 - 合言葉：本番では、どの画面を開いても最初に合言葉の画面が出るので、そこに入れます（下の「本番のアプリ全体を合言葉で守る」）。手元ではホーム（M01）の下の「合言葉を知っている人へ」に入れます。Functions の `unlockAi` が環境変数 `AI_PASSPHRASE` と比べ、合えば `aiAccess/{uid}` に記録します。端末は合言葉を覚えません。値はかめが決め、リポジトリには書きません
 - 関所：合言葉の記録があり、回数が上限の中のときだけ、呼び出し口に印（`GeminiPermit`）を付けて vertex を呼びます。どちらかが欠ければ固定の応答に戻ります（関所は `functions/src/adapters/aiGate.ts`、判断は `functions/src/domain/geminiBudget.ts`）
   - 場所の候補（`suggest-places`、Flash）：希望を書いた人に記録があり、`usage/flash` の累計が 300 回より下
   - しおりのルート（`propose-routes`、Flash）：建った場所の持ち主の誰かに記録があり、`usage/flash`（場所の候補と同じ数）が 300 回より下
-  - 模型（`build-model`、Argon）：建てた人か希望を書いた人に記録があり、`usage/argon` が 1 日 20 回（日本時間の日付）・累計 80 回より下。Argon 1 回の待ち時間は 255 秒までで、やり直しを含めて建築のトリガーの 540 秒に収まります。上限に達したら部品の模型になります
+  - 模型（`build-model`、Argon）：建てた人か希望を書いた人に記録があり、`usage/argon` が 1 日 20 回（日本時間の日付）・累計 300 回より下。Argon 1 回の待ち時間は 255 秒までで、やり直しを含めて建築のトリガーの 540 秒に収まります。上限に達したら部品の模型になります
   - 回数の記録（`usage/flash`、`usage/argon`）は端末から読めず、書けません（`firestore.rules`、確認テスト）
 - 全員に開く切り替え（フル AI）：かめの決定（`todo/humans/2026-11-08-judges-real-gemini.md`、2026-11-08）。普段は合言葉を通した人だけが本物です。審査の前などに人が決めたら、Firebase のコンソールで Firestore に `settings/ai` を作り、`openToAll` を真偽値の `true` にします。次の呼び出しから、合言葉を通していない人（審査員を含む）の場所の候補、しおりのルート、模型も本物になります。デプロイは要りません。戻すときは `false` にするか、ドキュメントを消します
-  - 回数の上限（Flash 累計 300 回、Argon 1 日 20 回・累計 80 回）は開いても同じで、使い切ると見本の一覧と部品の模型に戻ります。上限はチームのデモと審査員で分け合います
+  - 回数の上限（Flash 累計 300 回、Argon 1 日 20 回・累計 300 回）は開いても同じで、使い切ると見本の一覧と部品の模型に戻ります。上限はチームのデモと審査員で分け合います
   - しおりの移動時間（Routes API）は対象外で、今までどおり合言葉が要ります
   - `true` 以外の値（文字列の `"true"` など）では開きません。`settings` は端末から読めず、書けません（`firestore.rules` の既定の拒否）。切り替えるのは人で、AI はしません
 - クレジット切れのとき：Vertex が支払いの停止（403）や割り当ての不足（429）を返したら、その呼び出しは見本の一覧と部品の模型に戻り、画面は止まりません（`functions/src/adapters/gemini/index.ts`）。ただし請求先のアカウントにカードが付いていると、Cloud Credit を使い切っても Vertex は失敗せず、カードに請求されます。そのときに止めるのは上の回数の上限だけです
@@ -198,8 +228,20 @@ GEMINI_PROVIDER=agy mise exec -- npm run dev
 - 模型（Argon）は 1 回に 40 秒前後かかります（2026-11-07 に 1 回試して 40 秒、部品 62 個）。返ってきた JSON が決めた形でなければ、1 回やり直し、だめなら部品の模型に戻ります。保存した模型の `source` が `argon` なら本物、`parts` なら部品の模型です
 - 1 回に 20〜40 秒かかります。希望を書いてからピンが立つまで、建ったあとしおりの順が決まるまで、それぞれそのくらい待ちます。画面の「さがし中…」は、関数の打ち切り時間と同じ 330 秒まで続きます（agy の 1 回の上限 150 秒と、形が違って 1 回やり直すぶんを含む）
 - 回数は、Emulator のプロセスの中と、OS の一時フォルダの日付ごとの記録（`konbu-agy-calls-<日付>.json`、Argon は `konbu-agy-argon-calls-<日付>.json`）の両方で数えます。Emulator を立て直しても、同じ日のうちは数が戻りません（OS を再起動すると一時フォルダが消え、0 回に戻ります）。Functions のログに、1 回ごとの所要時間と「今日 n 回目（上限 30）」（Argon は上限 20）が出ます
-- Gemini が出した場所は、Places で実在を確かめません（Places の上限を使わないため。`docs/process/dev-plan.md`）。位置が日本の範囲（北緯 20〜46、東経 122〜154）の外の候補は捨てます。画面には「Gemini（Flash）の提案です（実在の確認はしていません）」と出ます
+- Gemini が出した場所は、Places で実在を確かめません（Places の上限を使わないため。`docs/process/dev-plan.md`）。位置が日本の範囲（北緯 20〜46、東経 122〜154）の外の候補は捨てます。画面には「Gemini（Flash）の提案です（実在の確認はしていません）」と出ます。ただし宿さがしの候補は、本番で Places を呼べるとき（希望を書いた人が合言葉を通しているか、全員に開く切り替えが入っているとき）に、1 回の宿さがしで 3 件まで Places のテキスト検索で確かめます（宿の種類、車の旅では駐車場。Takana の決定、`todo/humans/2026-11-22-lodging-search-realistic.md`）。手元（Emulator）では呼びません
 - agy の `--dangerously-skip-permissions` と `--json-schema` は使いません。JSON の形は文で頼み、Functions 側で確かめます
+
+## Google アカウントとの連携と旅の合言葉
+
+Google アカウントとの連携は任意です。連携しなくても、今までどおり匿名ログインで使えます（企画書「ユーザー体験」1）。
+
+- 手元：Auth Emulator が、見本の Google アカウントを選ぶ画面を出します（本物の Google にはつながりません）。ホームの「Google アカウントと連携する」を押し、「Add new account」→「Auto-generate user information」→「Sign in with Google.com」で進みます。別の人として試すときは、別のブラウザかシークレットウィンドウで同じアカウントを選びます
+- 連携のしかたは 2 つあります（`web/src/shared/api/account.ts`）。ふつうのブラウザでは別ウィンドウ（ポップアップ）、ホーム画面に置いたアプリ（PWA）の中では画面ごとログインの画面へ移ります。手元で後者を試すときは、URL に `?redirect` を付けて開きます
+- 連携済みの Google アカウントでほかの端末からログインすると、その端末で名前だけで参加していた旅は、Functions（`functions/src/features/move-memberships`）が Google アカウントの自分へ引き継ぎます
+- 本番：人が Firebase の Authentication で Google を有効にし、ログインの戻り先を登録するまで、連携のボタンは「まだ使えません」と出ます（`todo/humans/2026-11-16-google-sign-in-setup.md`）。本番では、ログインの画面をアプリと同じドメインで開きます（`web/src/shared/api/connect.ts` の `withOwnAuthDomain`。PWA の中から戻ってこられるようにするため）
+- PWA の中での連携は、HTTPS の本番でしか確かめられません（手元は HTTP なので、ホーム画面に追加できない）
+
+旅の合言葉は、旅ごとに Functions が作る 6 文字の英数字です（`functions/src/features/join-code`）。招待の画面を最初に開いたときに作り、`trips/{tripId}.joinCode` と `joinCodes/{合言葉}` に入れます。前からある旅にも、招待の画面を開いたときに付きます。本番のアプリ全体を守る合言葉（`AI_PASSPHRASE`）とは別のもので、設定は要りません。
 
 ## Google Maps
 
@@ -243,18 +285,42 @@ VITE_GOOGLE_MAPS_MAP_ID=<マップ ID>
 
 ### 課金を避ける上限
 
-Maps は無料枠を超えると課金されます。超えないよう、API ごとに 1 日の上限をかけています（2026-11-07 設定）。上限に達すると、その日はエラーになります。
+Maps は無料枠を超えると課金されます。超えないよう、API ごとに 1 日の上限をかけています（2026-11-07 設定。Places は 2026-11-08 と 2026-11-23 に上げた）。上限に達すると、その日はエラーになります。
 
 | API | 1 日の上限 |
 | --- | --- |
 | 地図の読み込み | 300 回 |
-| Places のテキスト検索、詳細取得 | 各 30 回（候補の口コミのための、場所の ID だけを受け取る検索は料金は無料の区分だが、1 日の回数はテキスト検索の 30 回を、建てる場所の確かめと分け合う。#203） |
+| Places のテキスト検索（SearchTextRequest） | 150 回（2026-11-08 に 30 回から上げた。`todo/humans/2026-11-08-raise-maps-daily-limits.md`。候補の口コミのための、場所の ID だけを受け取る検索は料金は無料の区分だが、1 日の回数はテキスト検索の 150 回を、建てる場所の確かめと分け合う。#203。宿さがしの候補の確かめ（1 回の宿さがしで 3 回まで）も同じ 150 回を分け合う。宿の確かめは種類を受け取るので Text Search Pro、車の旅では駐車場も受け取るので Enterprise + Atmosphere の区分になる。#629） |
 | Routes（経路） | 30 回 |
-| 口コミ（Place Details の Enterprise + Atmosphere） | 30 回（かめの決定、2026-11-08。人が 0 回から上げる） |
-| 写真（Place Photo） | 0 回。場所の情報に写真を出すときは、人が 30 回に上げてから、GitHub の変数 `PLACES_PHOTOS` を `on` にする（かめの決定 2026-11-07、#200） |
+| 口コミ（Place Details の Enterprise + Atmosphere。GetPlaceRequest） | 200 回（2026-11-23 に 30 回から上げた。かめの決定、Youkin06 が設定。2026-11-22 に 30 回を使い切り、本番で口コミが 429 で断られたため。審査（Demo Day 11/27）で止まらないように。`todo/humans/2026-11-23-places-quota-200.md`。最初の 30 回はかめの決定、2026-11-08） |
+| 写真（Place Photo。GetPhotoMediaRequest） | 100 回（2026-11-08 に 0 回から 30 回に上げて GitHub の変数 `PLACES_PHOTOS` を `on` にし、2026-11-23 に 100 回に上げた。かめの決定 2026-11-07、#200。`todo/humans/2026-11-23-places-quota-200.md`） |
 | 3D 地図、オートコンプリート、周辺検索、距離行列 | 0 回（使わない） |
 
 上限を変えるときは、無料枠と料金を料金表で確かめてからにします。
+
+Places の上限を 1 か月（30 日）毎日使い切ったときの料金の見込み（無料枠は SKU ごと・月ごと。https://developers.google.com/maps/billing-and-pricing/pricing のグローバル価格、2026-11-23 に確認）：
+
+| 何に使うか | SKU | 月の無料枠 | 超えたら（1,000 回あたり） | 1 日の上限 | 月の最大 | 最大の料金 |
+| --- | --- | --- | --- | --- | --- | --- |
+| 口コミ | Place Details Enterprise + Atmosphere | 1,000 回 | $25 | 200 回 | 6,000 回 | 約 $125 |
+| 写真 | Place Details Photos | 1,000 回 | $7 | 100 回 | 3,000 回 | 約 $14 |
+| 建てる場所の確かめ | Text Search Pro | 5,000 回 | $32 | 150 回（ほかの検索と分け合う） | 4,500 回 | $0 |
+| 候補の口コミのための検索 | Text Search Essentials (IDs Only) | 無制限 | 無料 | 同上 | | $0 |
+
+- 口コミと写真は、毎日使い切ると無料枠を超えます。合わせて最大で月 $139 ほどです。費用は Cloud Credit（20 ドル）から引かれ、予算アラートは通知だけで止まりません
+- 宿さがしで車の旅の駐車場も受け取る確かめ（Text Search の Enterprise + Atmosphere の区分）の単価は、確かめていません（未確認）
+- 今月すでに使った回数も月の無料枠に数えます。正確な数は Google Cloud の「API とサービス → 指標」で見ます
+- Demo Day（11/27）のあとに口コミと写真を 30 回に戻すかは、決まっていません
+
+#### 使った回数を画面で見る（デバッグ用）
+
+PC で開くと（画面の幅 1024px 以上）、スマホの大きさの画面の右の外側に、API ごとの「使った回数 / 上限」と横棒が出ます（`web/src/widgets/usage-panel`）。本番では合言葉を通した人だけ、手元では誰にでも出ます。スマホの幅では出ず、Functions も呼びません。1 分ごとに読み直します。
+
+- Gemini（Flash 累計、Argon 今日・累計）は、止めるための数（`usage/flash`、`usage/argon`）をそのまま出します
+- Places（テキスト検索、詳細、写真）、Routes、Knowledge Graph は、Functions が外へ呼ぶ直前に `usage/<API>` へ数えます（`functions/src/adapters/apiUsage.ts`）。地図の読み込みは、画面が地図を 1 つ作るたびに `countMapLoad` を呼んで数えます（本番では合言葉を通した人の分だけ。通していない人には地図を出さないため）
+- 「今日」は、Maps 系は Google の割り当てに合わせて米国太平洋時間（日本時間の 16 時か 17 時）で、Argon は日本時間で区切ります
+- 上限の数は `functions/src/domain/apiUsage.ts` に書いています。上の表の割り当てを変えたら、そこも直します
+- 表示のための数なので、実際に課金された回数とずれることがあります（数える前に失敗した呼び出し、手元の 5173 で読み込んだ地図は本番の数に入らない、など）。正確な数は Google Cloud Console の「API とサービス」で見ます
 
 ### 場所の写真と口コミ（手元では見本）
 
@@ -278,19 +344,19 @@ Maps は無料枠を超えると課金されます。超えないよう、API �
 - ピンが「工事中」になった瞬間に、トリガー `verifyPlace`（`functions/src/features/verify-place`）が動きます。聞く文は「場所の名前 地域」で、Gemini が推測した位置のまわり 50 km を優先します。受け取るのは place_id と位置だけです（`X-Goog-FieldMask: places.id,places.location`）
 - 推測の位置から 80 km 以内で見つかれば、ピンの `location` と `placeId` だけを書き換えます。名前と説明は Gemini（か見本の一覧）が書いたままです。見つからない・遠すぎる・呼べないときは、位置はそのままで建築は続きます
 - 模型（`build-model`）は位置も `placeId` も読みません（規約 3.2.3(c)。ハーネスの `maps/no-generation-input` とテストで確かめる）。ルート（`propose-routes`）は「完成」のあとに作るので、たいていは直した位置で組まれます。部品の模型（約 4 秒で完成）では、確かめが遅れて推測の位置で組まれることがあります。そのときも、しおりの移動時間（Routes）は開いたときのピンの位置で聞き直すので、ずれるのは保存した並び順と目安だけです
-  - 見つからない・遠すぎた場所は place_id が空のままなので、模型の失敗から建て直すと、もう一度 Places を呼びます（1 日 30 回の上限の中）
+  - 見つからない・遠すぎた場所は place_id が空のままなので、模型の失敗から建て直すと、もう一度 Places を呼びます（1 日 150 回の上限の中）
 - 保存の決まり：place_id は保存してよく（General Terms の Google ID Caching）、Places の位置（緯度経度）は 30 日までです（Maps Service Specific Terms 14.3）。審査の終わり（2026-11-14）のあと 30 日以内に、旅を消すか位置を戻します
-- 1 日の回数は、上の表の Places（テキスト検索）の上限（30 回）で止まります。1 か所建てるたびに 1 回です
-- 料金：`places.location` を受け取るので Text Search Pro の区分です（月 5,000 回まで無料、その先 1,000 回あたり $32。https://developers.google.com/maps/billing-and-pricing/pricing 、2026-11-08 に確認）。1 日 30 回の上限なら月 900 回までなので、無料の枠に収まります
+- 1 日の回数は、上の表の Places（テキスト検索）の上限（150 回）で止まります。1 か所建てるたびに 1 回です
+- 料金：`places.location` を受け取るので Text Search Pro の区分です（月 5,000 回まで無料、その先 1,000 回あたり $32。https://developers.google.com/maps/billing-and-pricing/pricing 、2026-11-08 と 2026-11-23 に確認）。1 日 150 回の上限なら月 4,500 回までなので、ほかの検索と分け合っても無料の枠に収まります
 - 名前（displayName）は受け取らず、保存もしません（規約 3.2.3(a)(iii) は店名と住所の保存を禁じています）。Places の内容を出すのは Google の地図の上だけです
 - キーは Places API（New）だけを使える API キーを別に作り、GitHub の secret `PLACES_API_KEY` に入れます。Deploy が関数の環境に渡します（`scripts/write-functions-env.mjs`）。入っていなければ、本番も推測の位置のままです。キーの作成と secret の設定は人が行います
 
 ### 場所の口コミ（Places API の Place Details）
 
-かめの決定（`todo/humans/2026-11-08-places-reviews.md` の B、2026-11-08）。本番だけ、合言葉を通した人だけに出し、Place Details（口コミ）の上限は 1 日 30 回にします。全員に開く切り替え（`settings/ai` の `openToAll`）では出しません。GitHub の variable `PLACES_REVIEWS` を `on` にし、上限を 0 回から 30 回に上げるのは人が行います。それまでは、Functions は口コミを聞かず、画面にも何も出ません。開発環境（Emulator、CI）では呼びません。
+かめの決定（`todo/humans/2026-11-08-places-reviews.md` の B、2026-11-08）。本番だけ、合言葉を通した人だけに出し、Place Details（口コミ）の上限は 1 日 30 回にしました（2026-11-23 に 200 回に上げた。上の「課金を避ける上限」）。全員に開く切り替え（`settings/ai` の `openToAll`）では出しません。GitHub の variable `PLACES_REVIEWS` を `on` にし、上限を上げるのは人が行います。それまでは、Functions は口コミを聞かず、画面にも何も出ません。開発環境（Emulator、CI）では呼びません。
 
 - 場所の情報（S12）を広げたときに、callable `placeReviews`（`functions/src/features/place-reviews`）を 1 回呼びます。Functions は、開いた人が旅のメンバーで、合言葉を通していて、場所を Places で確かめてある（placeId がある）ときだけ、Place Details を 1 回呼びます（`X-Goog-FieldMask: reviews,googleMapsUri`、日本語）
-- 料金：`reviews` は Place Details Enterprise + Atmosphere の区分です（月 1,000 回まで無料、その先 1,000 回あたり $25。https://developers.google.com/maps/billing-and-pricing/pricing 、2026-11-08 に確認）。1 日 30 回の上限なら月 900 回までなので、無料の枠に収まります
+- 料金：`reviews` は Place Details Enterprise + Atmosphere の区分です（月 1,000 回まで無料、その先 1,000 回あたり $25。https://developers.google.com/maps/billing-and-pricing/pricing 、2026-11-08 と 2026-11-23 に確認）。1 日 200 回の上限なら月 6,000 回までで、毎日使い切ると無料の枠を 5,000 回超え、最大で月 $125 ほどになります（かめの決定、2026-11-23）
 - 保存の決まり：口コミは保存できません（Maps Platform 規約 3.2.3(a)(iii)）。Functions は返すだけで、画面はページのメモリーにだけ（最大 20 か所）持ち、再読み込みで消えます。同じ場所を開き直しても聞き直しません。口コミは模型や Gemini に渡しません（3.2.3(c)）
 - 表示の決まり（https://developers.google.com/maps/documentation/places/web-service/policies ）：投稿者の名前・アバター・プロフィールへのリンク、口コミを Google マップで開くリンク、報告のリンク、並び順（関連度の順）、Google マップの帰属を出しています
 
@@ -303,6 +369,16 @@ Maps は無料枠を超えると課金されます。超えないよう、API �
 - その説明を使って Gemini が作った模型には、説明の文と出典（記事の URL とライセンス）を `model/current` の `reference` に残します。場所の情報（S12）には、その説明を引用として出し、記事とライセンスへのリンクを添えます（CC BY-SA は出典を示せば保存と表示を許す。かめ、2026-11-08）
 - 費用：Cloud の課金はありません（1 日 10 万回まで無料、https://developers.google.com/knowledge-graph/reference/rest/v1/usage-limits 、2026-11-08 に確認）
 - キーは Knowledge Graph Search API だけを使える API キーを作り、GitHub の secret `KG_API_KEY` に入れます。Deploy が関数の環境に渡します。キーの作成と secret の設定は人が行います
+
+### 飛行機の時刻表（公共交通オープンデータセンター）
+
+かめの決定（`todo/humans/2026-11-18-odpt-flight-timetable.md`、2026-11-18、#424）。しおりに飛行機の区間（遠い区間と島への区間は最初から飛行機。区間の手段で飛行機を選んだ区間も）があると、「飛行機」を押さなくても、しおりを作るとき・組み直すときに、ANA と JAL の国内線の時刻表から便を選びます（かめの決定、2026-11-20、#482。`functions/src/adapters/odpt.ts`、`functions/src/domain/flight.ts`、`functions/src/domain/flightPlanner.ts`）。時刻表を読むのは、便を探す飛行機の区間があるときだけです。
+
+- キーは公共交通オープンデータセンターの開発者サイトのアクセストークンで、GitHub の secret `ODPT_CONSUMER_KEY` に入れてあります。Deploy が関数の環境に渡します。入っていなければ、飛行機は距離の式の目安です。キーの作成と secret の設定は人が行います
+- 時刻表は「公共交通オープンデータ基本ライセンス」です。関数のメモリーにだけ持ち、1 日ごとに取り直します。リポジトリや端末から読める所には置きません（時刻表の公開・再配布は禁止）
+- 画面には、便の名前と時刻と、出典の 1 行「時刻表：公共交通オープンデータセンター」を出します。取得日、正確・完全とは限らないこと、問い合わせ先（kamenogakkou@gmail.com）の文は、2026-11-22 に Takana の決定で外しました（前は開発者ガイドライン 2.2.1、3.1 に合わせて全文を出していました）
+- 手元（Emulator）では、キーがなければ「見本」と書いた時刻表を使います（見た目を確かめるだけ。実在の便ではない）
+- 費用はかかりません
 
 ## 費用の注意
 

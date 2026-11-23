@@ -1,4 +1,4 @@
-/* しおりの入口の案内（ShioriCoachMark.tsx）。画面全体を覆い、明るく残した丸（ルートボタン）だけを押せるようにする */
+/* しおりの入口の案内（ShioriCoachMark.tsx）。画面全体を覆う。明るく残した丸（ルートボタン）を押すと開き、暗い所を押すととばす */
 .layer {
   position: fixed;
   inset: 0;
@@ -8,7 +8,21 @@
   animation: fade 240ms ease-out;
 }
 
-/* 明るく残す丸。まわりを、丸の影でうすく暗くする（影は押せないので、押すと後ろの .layer に当たって何も起きない） */
+/* 暗い所を押したときに受ける、画面全体の見えないボタン（押すと案内をとばす） */
+.skip {
+  position: absolute;
+  inset: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.skip:focus-visible {
+  outline: none;
+}
+
+/* 明るく残す丸。まわりを、丸の影でうすく暗くする（影は押せないので、押すと後ろの .skip に当たって案内をとばす） */
 .hole {
   position: absolute;
   padding: 0;
@@ -54,6 +68,28 @@
   }
 }
 
+/* 旅の名前の帯を明るく残すときは、帯と同じ角の丸い横長にする */
+.band {
+  border-radius: calc(var(--radius-l) + 8px);
+}
+
+/* 帯の下の一言は、矢印の根元を真ん中にして置く */
+.center {
+  transform: translateX(-50%);
+  text-align: center;
+}
+
+/* 帯へ向けた矢印は、上へ寄せたり戻したりする */
+.up {
+  animation-name: nudge-up;
+}
+
+@keyframes nudge-up {
+  to {
+    transform: translateY(-4px);
+  }
+}
+
 /* 矢印を、ボタンのほうへ少しだけ寄せたり戻したりする */
 @keyframes nudge {
   to {
@@ -66,4 +102,30 @@
   .guide {
     animation: none;
   }
+}
+
+/* 場所カードの「建築する！」を明るく残すときは、ボタンと同じ角の丸い横長にする */
+.button {
+  border-radius: calc(var(--radius-l) + 8px);
+}
+
+/* 建築ボタンへ向けた矢印は、下へ寄せたり戻したりする */
+.down {
+  animation-name: nudge-down;
+}
+
+@keyframes nudge-down {
+  to {
+    transform: translateY(4px);
+  }
+}
+
+/* 長い一言は、画面の幅に収まるよう折り返す（文の中の改行の所でも改行する） */
+.wrap {
+  width: max-content;
+  max-width: calc(100vw - 32px);
+  white-space: pre-line;
+  /* 語の途中で折り返さず、文節で切って行の長さをそろえる（やりたいことの欄の案内の長い一言。UI/UX レビューの M-1） */
+  word-break: auto-phrase;
+  text-wrap: balance;
 }

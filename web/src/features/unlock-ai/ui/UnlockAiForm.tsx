@@ -1,3 +1,4 @@
+import { translate as t } from '@/shared/lib'
 import { Button, ErrorText, TextInput } from '@/shared/ui'
 import { PASSPHRASE_MAX, useUnlockAi } from '../model/useUnlockAi'
 import styles from './UnlockAiForm.module.css'
@@ -15,8 +16,8 @@ export function UnlockAiForm({ onDone }: Props) {
       <TextInput
         name="passphrase"
         type="password"
-        aria-label="合言葉"
-        placeholder="合言葉"
+        aria-label={t('合言葉', 'Passphrase')}
+        placeholder={t('合言葉', 'Passphrase')}
         value={passphrase}
         maxLength={PASSPHRASE_MAX}
         autoComplete="off"
@@ -24,7 +25,7 @@ export function UnlockAiForm({ onDone }: Props) {
         onChange={(event) => setPassphrase(event.target.value)}
       />
       <Button type="submit" variant="go" disabled={sending}>
-        送る
+        {t('送る', 'Submit')}
       </Button>
       <div className={styles.error}>
         <ErrorText>{problem}</ErrorText>

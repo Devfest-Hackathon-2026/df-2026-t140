@@ -3,7 +3,21 @@
 // node --test scripts/map-declutter.test.mjs（Node 24 は .ts の型を外して読める）
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { declutter, estimateLabelWidth, fitSize, MERGE_RATIO, overlapReport } from '../web/src/widgets/trip-map/lib/declutter.ts'
+import {
+  aloneSize,
+  BADGE,
+  badgeOffset,
+  buildingSizes,
+  doneLeft,
+  declutter,
+  estimateLabelWidth,
+  fitSize,
+  MERGE_RATIO,
+  overlapReport,
+  SIZE_CURVE,
+  zoomedSize,
+} from '../web/src/widgets/trip-map/lib/declutter.ts'
+import { MAX_ZOOM } from '../web/src/widgets/trip-map/lib/mercator.ts'
 
 // 建物の大きさ（いつも同じ）。みんなの地図は 140 × 0.81 = 113px、しおりの画面は 110 × 0.81 = 89px（ui/TripMap.tsx）
 const SIZES = [89, 113]
@@ -201,4 +215,111 @@ test('同じ入力なら同じ結果になり、並び順にもよらない', ()
 test('名札の幅の見込みは、最大の幅で止まる', () => {
   assert.equal(estimateLabelWidth('東京駅', { avatar: false, order: false, maxWidth: 190 }), 36 + 24)
   assert.equal(estimateLabelWidth('とても長い名前の場所がここに入ります本当に長い', { avatar: true, order: true, maxWidth: 190 }), 190)
+})
+
+// ---- 建物の大きさ（拡大の度合いとまわりの混み具合。Takana の依頼、2026-11-16） ----
+
+/** スマホの縦持ちの地図の幅（px） */
+const PHONE_WIDTH = 390
+/** 模型のうち、建物が描かれる幅（絵の幅に対する割合。lib/declutter.ts の BODY） */
+const BODY_WIDTH = 0.76
+
+test('日本全体が見えるくらい（拡大の度合い 5 以下）では、面積が基準の 1/8（幅 1/4 の 2 倍の面積）', () => {
+  for (const base of SIZES) {
+    for (const zoom of [4, 4.5, 5]) {
+      const size = zoomedSize(base, zoom)
+      assert.ok(Math.abs((size / base) ** 2 - 1 / 8) < 1e-9, `${base} ${zoom} の面積の割合が ${(size / base) ** 2}`)
+    }
+    const alone = buildingSizes([{ id: 'a', x: 0, y: 0 }], { base, zoom: 4.5, mapWidth: PHONE_WIDTH })
+    assert.equal(alone.a, Math.round((base * Math.SQRT2) / 4))
+  }
+})
+
+test('市街地のあたり（11〜12）では、これまでと同じ基準の大きさ', () => {
+  for (const base of SIZES) {
+    for (const zoom of [11, 11.5, 12]) {
+      assert.equal(zoomedSize(base, zoom), base)
+      assert.equal(aloneSize(base, zoom, PHONE_WIDTH), base)
+    }
+  }
+})
+
+test('いちばん寄ったとき、まわりに建物がなければ、建物が描かれる幅が地図の幅の 40%', () => {
+  assert.equal(SIZE_CURVE.max, MAX_ZOOM)
+  for (const base of SIZES) {
+    const sizes = buildingSizes([{ id: 'a', x: 0, y: 0 }], { base, zoom: MAX_ZOOM, mapWidth: PHONE_WIDTH })
+    assert.ok(Math.abs(sizes.a * BODY_WIDTH - PHONE_WIDTH * 0.4) <= 1, `${sizes.a}px`)
+  }
+})
+
+test('大きさは拡大の度合いに対して単調に、なめらかに変わる（1 段の変わり方が急すぎない）', () => {
+  for (const base of SIZES) {
+    let previous = null
+    for (let zoom = 4; zoom <= MAX_ZOOM + 1e-9; zoom += 0.05) {
+      const size = aloneSize(base, zoom, PHONE_WIDTH)
+      if (previous !== null) {
+        assert.ok(size >= previous - 1e-9, `${zoom.toFixed(2)} で小さくなった`)
+        // 0.05 段で 4% より大きく変わらない（倍率を対数でつなぐので、急な段差が出ない）
+        assert.ok(size / previous <= 1.04, `${zoom.toFixed(2)} で ${(size / previous).toFixed(3)} 倍`)
+      }
+      previous = size
+    }
+    // 端ではゆるやか（smoothstep）：5 と 16 のすぐ内側では、ほとんど変わらない
+    assert.ok(zoomedSize(base, 5.2) / zoomedSize(base, 5) < 1.01)
+    assert.ok(aloneSize(base, 15.8, PHONE_WIDTH) / aloneSize(base, 16, PHONE_WIDTH) > 0.99)
+  }
+})
+
+test('寄って大きくしても、まわりの建物とは重ならず、基準より小さくはしない', () => {
+  for (const [label, places] of SETS) {
+    for (const zoom of [12, 13, 14, 15, 15.5, 16]) {
+      for (const base of SIZES) {
+        const buildings = buildingsOf(at(places, zoom))
+        const sizes = buildingSizes(buildings, { base, zoom, mapWidth: PHONE_WIDTH })
+        for (const a of buildings) {
+          assert.ok(sizes[a.id] >= Math.round(zoomedSize(base, zoom)), `${label} ${zoom} ${a.id} が基準より小さい`)
+          assert.ok(sizes[a.id] <= Math.round(aloneSize(base, zoom, PHONE_WIDTH)), `${label} ${zoom} ${a.id} が上限より大きい`)
+          for (const b of buildings) {
+            if (a === b) continue
+            // 基準より大きくした建物は、隣とぶつからない大きさまで
+            const grown = Math.max(sizes[a.id], sizes[b.id]) > Math.round(zoomedSize(base, zoom))
+            if (grown) assert.ok(Math.max(sizes[a.id], sizes[b.id]) <= Math.ceil(fitSize(a, b)) || fitSize(a, b) <= zoomedSize(base, zoom), `${label} ${zoom} ${a.id} と ${b.id}`)
+          }
+        }
+      }
+    }
+  }
+})
+
+test('まわりに近い建物があるときは、離れている建物ほど大きくしない', () => {
+  const zoom = 16
+  const items = [
+    { id: 'alone', x: 2000, y: 0 },
+    { id: 'p', x: 0, y: 0 },
+    { id: 'q', x: 150, y: 0 },
+  ]
+  const sizes = buildingSizes(items, { base: 113, zoom, mapWidth: PHONE_WIDTH })
+  assert.ok(sizes.alone > sizes.p, `${sizes.alone} と ${sizes.p}`)
+  assert.equal(sizes.p, sizes.q)
+  assert.ok(sizes.p * BODY_WIDTH <= 150, '隣どうしが重ならない')
+})
+
+test('まとめた数の札は、模型が小さくても大きくても、模型の右上の角に 4px だけかかる（#371）', () => {
+  // いちばん引いたとき（基準の farScale 倍）から、ふだんの大きさまで
+  for (const size of [...SIZES.map((base) => base * SIZE_CURVE.farScale), ...SIZES]) {
+    const badge = badgeOffset(size)
+    // 見える模型の右上の角（屋根の右上あたり）。札の左下の角が、ここから右上へはみ出す
+    const corner = { x: Math.round(size * 0.3), y: Math.round(size * -0.4) }
+    const badgeBottom = badge.y + BADGE
+    assert.equal(corner.x - badge.x, 4, `大きさ ${size}：札が角に横にかかる幅`)
+    assert.equal(badgeBottom - corner.y, 4, `大きさ ${size}：札が角に縦にかかる幅`)
+  }
+})
+
+test('「建築完了」の印は、まとめた数の札が出ているときは札の右に出て、札を隠さない', () => {
+  for (const size of [...SIZES.map((base) => base * SIZE_CURVE.farScale), ...SIZES]) {
+    const badge = badgeOffset(size)
+    assert.ok(doneLeft(size, 2) >= badge.x + BADGE, `大きさ ${size}：印の左の端が札の右の端より右`)
+    assert.equal(doneLeft(size, 1), 18, `大きさ ${size}：札がないときは、ふだんの位置`)
+  }
 })

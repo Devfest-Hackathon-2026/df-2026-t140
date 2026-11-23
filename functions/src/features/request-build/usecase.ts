@@ -1,6 +1,7 @@
 import { FieldValue } from 'firebase-admin/firestore'
-import { BUILT_STATUSES, type Pin } from '../../domain/pin'
-import { decideBuildRequest } from './logic'
+import { BUILT_STATUSES, isStaleBuild, type Pin } from '../../domain/pin'
+import { isConfirmed, type Trip } from '../../domain/trip'
+import { buildUpdate, decideBuildRequest } from './logic'
 import type { RequestBuildPorts } from './ports'
 import type { RequestBuildResult } from './types'
 
@@ -21,23 +22,28 @@ export async function requestBuild(
   const pinRef = trip.collection('pins').doc(input.pinId)
 
   return db.runTransaction(async (tx) => {
-    const [member, pin, built] = await Promise.all([
+    const [tripSnapshot, member, pin, built] = await Promise.all([
+      tx.get(trip),
       tx.get(trip.collection('members').doc(input.uid)),
       tx.get(pinRef),
       tx.get(trip.collection('pins').where('status', 'in', BUILT_STATUSES)),
     ])
+    const data = pin.data() as Pin | undefined
+    // 上限に数えるのは、工事中と完成のうち止まっていないもの（#727。画面は止まったピンを失敗として見せるので、数をそろえる）。
+    // 頼んだピン自身は logic が見る（止まっていれば 1 つ引く）ので、ここでは除かない
+    const nowMs = Date.now()
+    const builtCount = built.docs.filter((doc) => doc.id === input.pinId || !isStaleBuild(doc.data() as Pin, nowMs)).length
     const result = decideBuildRequest({
       isMember: member.exists,
-      pinStatus: (pin.data() as Pin | undefined)?.status,
-      builtCount: built.size,
+      confirmed: isConfirmed((tripSnapshot.data() ?? {}) as Trip),
+      pinStatus: data?.status,
+      builtCount,
+      dismissed: Boolean(data?.filler?.dismissed),
+      stale: data ? isStaleBuild(data, nowMs) : false,
     })
     if (result === 'ok') {
-      tx.update(pinRef, {
-        status: 'building',
-        builtBy: input.uid,
-        buildStartedAt: null,
-        updatedAt: FieldValue.serverTimestamp(),
-      })
+      // しおりの空いた時間への提案（features/suggest-fillers）は、「入れる」を押した人のやりたいことにする（#520。logic の buildUpdate）
+      tx.update(pinRef, { ...buildUpdate(data ?? {}, input.uid), updatedAt: FieldValue.serverTimestamp() })
     }
     return result
   })

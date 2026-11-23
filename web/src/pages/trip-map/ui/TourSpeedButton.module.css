@@ -1,0 +1,45 @@
+/* 旅の再生の速さのボタン。ふだんのボタンと同じ「ぷっくり」（縁と下の厚み。押すと沈む） */
+.speed {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: var(--tap-size);
+  padding: 0 var(--space-4) 0 var(--space-3);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-m);
+  background: var(--color-surface);
+  box-shadow:
+    0 var(--edge-depth) 0 var(--color-edge),
+    var(--shadow-float);
+  color: var(--color-text);
+  font-size: var(--font-size-m);
+  font-weight: var(--font-weight-heading);
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  touch-action: manipulation;
+  pointer-events: auto;
+}
+
+.speed > svg {
+  color: var(--color-route);
+}
+
+/* 速めているあいだ */
+.fast {
+  border-color: var(--color-route);
+  background: var(--color-route-soft);
+  box-shadow:
+    0 var(--edge-depth) 0 var(--color-route-edge),
+    var(--shadow-float);
+  color: var(--color-route-edge);
+}
+
+.speed:active {
+  transform: translateY(var(--edge-depth));
+  box-shadow: none;
+}
+
+.speed:focus-visible {
+  outline: 3px solid var(--color-route);
+  outline-offset: 3px;
+}

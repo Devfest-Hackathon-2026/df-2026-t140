@@ -1,2 +1,7 @@
 export { makeLeg, type TourLeg } from './lib/tourPath'
-export { type MapFocus, type MapLine, type MapOrigin, type MapTour, TripMap } from './ui/TripMap'
+export { type MapAirport, type MapFocus, type MapLine, type MapOrigin, type MapTour, TripMap } from './ui/TripMap'
+export type { TourVehicle } from './ui/MapVehicle'
+export { DIVE_MS } from './lib/regionBounds'
+export { RegionMap } from './ui/RegionMap'
+export { pickedTargets } from './lib/pickedTargets'
+export { focusAreaName, PREFECTURES as PREFECTURE_POINTS } from './lib/viewLabel'

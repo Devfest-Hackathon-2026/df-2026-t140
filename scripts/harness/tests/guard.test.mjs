@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { resolve } from 'node:path'
 import { test } from 'node:test'
-import { checkCommand } from '../lib/command-guard.mjs'
+import { checkCommand, latestChecks, mergeProblems } from '../lib/command-guard.mjs'
 import { checkEdit } from '../lib/edit-guard.mjs'
 import { ALLOW, ALLOW_POWERSHELL, DENY, DENY_ON_DEPLOY, DENY_ON_MAIN, DENY_POWERSHELL } from './cases/guard-cases.mjs'
 
@@ -21,7 +21,7 @@ function ctx(overrides = {}) {
 }
 
 // merge の評価用の PR（gh pr view の結果を、ハーネスが読む形にしたもの）
-const ready = { base: 'main', files: ['web/src/app/App.tsx'], isDraft: false, mergeable: 'MERGEABLE', checks: [{ name: 'harness', state: 'SUCCESS' }, { name: 'verify', state: 'SKIPPED' }], review: { verdict: 'APPROVE', sha: 'abc1234' }, headSha: 'abc1234def567' }
+const ready = { base: 'main', files: ['web/src/app/App.tsx'], isDraft: false, mergeable: 'MERGEABLE', checks: [{ name: 'harness', state: 'SUCCESS' }, { name: 'verify', state: 'SKIPPED' }], review: { verdict: 'APPROVE', sha: 'abc1234' }, headSha: 'abc1234def567', localVerify: { sha: 'abc1234def567' } }
 const PRS = {
   12: { ...ready, files: ['docs/work/feat-trip-create.md'], isDraft: true, checks: [], review: undefined }, // 作業宣言だけ
   20: ready,
@@ -29,9 +29,12 @@ const PRS = {
   13: { ...ready, review: undefined },
   14: { ...ready, checks: [{ name: 'harness', state: 'FAILURE' }] },
   15: { ...ready, isDraft: true },
+  22: { ...ready, labels: ['作業中'] }, // 作業中ラベル（Organization の Free ではドラフトが使えない）
+  23: { ...ready, labels: ['bug'] }, // ほかのラベルは止めない
   16: { ...ready, mergeable: 'CONFLICTING' },
   17: { ...ready, review: { verdict: 'APPROVE', sha: '0000000' } },
-  18: { ...ready, checks: [{ name: 'verify', state: 'PENDING' }] },
+  18: { ...ready, checks: [{ name: 'verify', state: 'PENDING' }] }, // CI が順番待ちでも、手元の記録があれば merge できる（2026-11-22）
+  24: { ...ready, localVerify: undefined }, // 手元の確認の記録がない
   19: { ...ready, review: { verdict: 'REQUEST_CHANGES', sha: 'abc1234' } },
   30: { ...ready, base: 'deploy', files: ['web/src/app/App.tsx'] }, // main → deploy の反映。条件がそろっていても人が行う
 }
@@ -145,4 +148,32 @@ test('ファイルの編集：秘密情報、運営資料、artifact のコピ�
 test('ファイルの編集：プロジェクトの外（メモや一時ファイル）は対象外', () => {
   const outside = resolve(projectDir, '..', 'memory', 'note.md')
   assert.equal(checkEdit({ filePath: outside, projectDir, branch: 'main' }).decision, 'allow')
+})
+
+test('CI を流し直したら、同じチェックは一番新しい結果だけで merge を判断する', () => {
+  const run = (name, conclusion, startedAt, workflowName = name) => ({ name, workflowName, status: 'COMPLETED', conclusion, startedAt })
+  const rollup = [
+    run('verify', 'FAILURE', '2026-11-18T11:13:30Z'),
+    run('harness', 'FAILURE', '2026-11-18T11:13:30Z'),
+    run('verify', 'SUCCESS', '2026-11-18T12:13:00Z'),
+    run('harness', 'SUCCESS', '2026-11-18T13:07:50Z'),
+  ]
+  assert.deepEqual(latestChecks(rollup), [
+    { name: 'verify', state: 'SUCCESS' },
+    { name: 'harness', state: 'SUCCESS' },
+  ])
+  assert.deepEqual(mergeProblems({ ...ready, checks: latestChecks(rollup) }), [])
+  // 新しいほうが失敗なら止める。新しいほうが動いている途中も止める
+  assert.deepEqual(latestChecks([run('verify', 'SUCCESS', '2026-11-18T11:00:00Z'), run('verify', 'FAILURE', '2026-11-18T12:00:00Z')]), [{ name: 'verify', state: 'FAILURE' }])
+  assert.deepEqual(
+    latestChecks([run('verify', 'SUCCESS', '2026-11-18T11:00:00Z'), { name: 'verify', workflowName: 'verify', status: 'IN_PROGRESS', conclusion: '', startedAt: '2026-11-18T12:00:00Z' }]),
+    [{ name: 'verify', state: 'PENDING' }],
+  )
+  // 流し直してキューに入ったばかり（時刻がない、0001-01-01）の新しいチェックは、古い成功より優先して止める
+  const queued = (startedAt) => ({ name: 'verify', workflowName: 'verify', status: 'QUEUED', conclusion: '', startedAt })
+  assert.deepEqual(latestChecks([run('verify', 'SUCCESS', '2026-11-18T11:00:00Z'), queued('0001-01-01T00:00:00Z')]), [{ name: 'verify', state: 'PENDING' }])
+  assert.deepEqual(latestChecks([run('verify', 'SUCCESS', '2026-11-18T11:00:00Z'), queued(undefined)]), [{ name: 'verify', state: 'PENDING' }])
+  assert.deepEqual(latestChecks([queued(undefined), run('verify', 'SUCCESS', '2026-11-18T11:00:00Z')]), [{ name: 'verify', state: 'PENDING' }])
+  // ワークフローが違えば、同じ名前でも別のチェックとして両方見る
+  assert.equal(latestChecks([run('build', 'SUCCESS', '2026-11-18T11:00:00Z', 'a'), run('build', 'FAILURE', '2026-11-18T12:00:00Z', 'b')]).length, 2)
 })

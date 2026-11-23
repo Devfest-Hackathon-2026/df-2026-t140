@@ -1,9 +1,10 @@
 import type { DocumentReference } from 'firebase-admin/firestore'
-import { originLocation } from '../../domain/originPlaces'
+import { tripOrigin } from '../../domain/tripOrigin'
 import type { Pin } from '../../domain/pin'
 import type { Route } from '../../domain/route'
-import { travelLegs, tripDays } from '../../domain/routePlan'
+import { planPlace, travelLegs, tripDays } from '../../domain/routePlan'
 import type { Trip } from '../../domain/trip'
+import { travelModeOf } from '../../domain/travelMode'
 import { legPathsOf, replan, routeOrder, sampleLegPaths, travelGate } from './logic'
 import type { ShioriTravelPorts } from './ports'
 import type { ShioriTravelInput, ShioriTravelResult } from './types'
@@ -29,10 +30,12 @@ export async function shioriTravel(ports: ShioriTravelPorts, input: ShioriTravel
   ])
   const trip = tripSnapshot.data() as Trip | undefined
   const route = routeSnapshot.data() as Route | undefined
+  // 電車・バスと飛行機の旅は、車の Routes を聞かない（回数も使わない）。保存してある見積もりをそのまま出す
+  if (memberSnapshot.exists && trip && route && travelModeOf(trip) !== 'car') return { status: 'estimate', reason: 'transit' }
   // 開発環境（Emulator）では Routes を呼ばず、見本の曲線を返す（見た目を確かめるため。時刻は保存してある目安のまま。合言葉は見ない）
   if (routesApi.sampleMode() && memberSnapshot.exists && trip && route) {
     const sampleOrder = await builtOrder(tripRef, route)
-    const legs = travelLegs(sampleOrder, { name: trip.origin, location: originLocation(trip.origin) })
+    const legs = travelLegs(sampleOrder, tripOrigin(trip))
     return {
       status: 'routes',
       pinIds: route.pinIds,
@@ -50,7 +53,7 @@ export async function shioriTravel(ports: ShioriTravelPorts, input: ShioriTravel
   if (refused || !trip || !route) return refused ?? { status: 'not-found' }
 
   const order = await builtOrder(tripRef, route)
-  const origin = { name: trip.origin, location: originLocation(trip.origin) }
+  const origin = tripOrigin(trip)
   const { points, keys } = travelLegs(order, origin)
   if (keys.length === 0) return { status: 'estimate', reason: 'unavailable' }
 
@@ -73,7 +76,7 @@ async function builtOrder(tripRef: DocumentReference, route: Route) {
   const pinsSnapshot = await tripRef.collection('pins').where('status', '==', 'done').get()
   const places = pinsSnapshot.docs.map((snapshot) => {
     const pin = snapshot.data() as Pin
-    return { id: snapshot.id, name: pin.name, location: pin.location, uid: pin.uid }
+    return planPlace(snapshot.id, pin)
   })
   return routeOrder(route, places)
 }

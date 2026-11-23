@@ -4,7 +4,7 @@ set -euo pipefail
 
 PROJECT_ID=konbu-devfest-hackathon-2026
 PROJECT_NUMBER=1032832330557
-REPO=Lazyturtle0852/konbu-devfest
+REPO=konbus/konbu-devfest  # 2026-11-18 に Lazyturtle0852 から移した
 POOL=github
 PROVIDER=konbu-devfest
 DEPLOY_SA="github-deploy@${PROJECT_ID}.iam.gserviceaccount.com"

@@ -11,6 +11,11 @@
 
 .title {
   font-size: var(--font-size-xl);
+  overflow-wrap: anywhere;
+}
+
+.phrase {
+  white-space: nowrap;
 }
 
 .lead {

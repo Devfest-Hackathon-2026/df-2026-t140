@@ -7,6 +7,18 @@ import type { GeminiPermit } from '../../ports/gemini'
 import { chooseModel, shouldStartBuild } from './logic'
 import type { BuildModelPorts } from './ports'
 import { buildModelTask } from './prompt'
+import { libraryEntry, modelKey, readLibraryEntry, type ReusableModel } from './logic/library'
+
+/**
+ * 建物辞書（logic/prebuilt.ts、ビルド後で約 5.5MB）を、使うときにだけ読み込む。
+ * Cloud Functions はどの関数のインスタンスも index 全体を読み込むので、ここで静的に import すると、
+ * 合言葉の関数（unlockAi）なども起動時に辞書を読み込み、既定の 256MiB を超えて落ちる（2026-11-23 の本番の障害）。
+ * 動的 import は CJS の出力でも import() のまま残り、最初に呼んだときに 1 回だけ読み込まれる。
+ */
+async function prebuiltModels() {
+  const { PREBUILT_MODELS } = await import('./logic/prebuilt.js')
+  return PREBUILT_MODELS
+}
 
 export interface BuildModelOptions {
   /**
@@ -18,6 +30,13 @@ export interface BuildModelOptions {
    * 本物の Gemini（stub 以外）で作るか。true のときだけ、名前の参考の説明を引く（固定の応答では使わないので呼ばない）
    */
   lookUp?: boolean
+  /** 部品の見本を使ってよいか。handlerはEmulatorのときだけtrueにする。 */
+  allowParts?: boolean
+  /**
+   * 本番の確認テストの旅（isSmokeTrip）か。true なら、本物の生成ができなくても失敗にせず、部品の模型で「完成」にする。
+   * ほかの旅は allowParts、lookUp、guarded の判断のまま
+   */
+  smokeTrip?: boolean
 }
 
 /**
@@ -28,8 +47,9 @@ export interface BuildModelOptions {
  *   引き受けた時刻を書く。2 回目は、もう時刻が入っているので何もしない
  * - 模型の保存と「完成」は、1 回の書き込みにまとめる
  *
- * 失敗したとき：Gemini の呼び出し口が 1 回やり直し、だめなら固定の応答（部品の模型）に戻す。
- * 応答の形が違えば、ここでも部品の模型に差し替える。それでも書けなかったら「失敗」にする（画面からもう一度建てられる）。
+ * 本番で生成に失敗したときは「失敗」にする（画面からもう一度建てられる）。部品の見本はEmulatorと本番の確認テストの旅と、
+ * 費用のかかる経路で印が付かなかったとき（本物を呼べないとき。#728）に使う。
+ * 生成する前に辞書を調べ、妥当な生成済み模型があれば、出典と一緒にコピーする。
  *
  * 模型の入力は、場所の名前、説明、希望の文と、名前で引いた百科事典の説明（Knowledge Graph、あれば）だけ。
  * ピンの placeId と位置（Maps 由来）は使わない。
@@ -58,6 +78,22 @@ export async function buildModelForPin(
   if (!pin) return
 
   try {
+    const key = modelKey(pin)
+    const cacheRef = key ? db.collection('modelCache').doc(key) : null
+    let cached: ReusableModel | null = null
+    if (cacheRef) {
+      try { cached = readLibraryEntry((await cacheRef.get()).data(), pin) }
+      catch (cause) { console.warn('建物辞書を読めなかったので通常の生成に進みます', cause) }
+    }
+    cached ??= (await prebuiltModels()).map((entry) => readLibraryEntry(entry, pin)).find((entry) => entry !== null) ?? null
+    if (cached) {
+      if (ports.stubDelayMs > 0) await ports.wait(ports.stubDelayMs)
+      const batch = db.batch()
+      batch.set(pinRef.collection('model').doc('current'), { ...cached, createdAt: FieldValue.serverTimestamp() })
+      batch.update(pinRef, { status: 'done', updatedAt: FieldValue.serverTimestamp() })
+      await batch.commit()
+      return
+    }
     const wish = (await trip.collection('wishes').doc(pin.wishId).get()).data() as Wish | undefined
     const permit = options.guarded ? await modelPermit(ports, [pin.builtBy, pin.uid], pinId) : undefined
     // 本物の Gemini で作るときだけ、名前の参考の説明を引く（費用のかかる経路なら、印が付いたときだけ）
@@ -75,6 +111,11 @@ export async function buildModelForPin(
       { permit },
     )
     const model = chooseModel(result, pin.category)
+    // 本物の生成に失敗したとき、汎用の部品模型を生成の成功として表示しない。
+    // ただし、費用のかかる経路で印が付かなかった（合言葉を通した人がいない、Argon の上限を使い切った）ときは、本物を呼んでいないので
+    // 部品の模型で完成にする。場所の情報に「用意した部品の模型です」と出る（企画書。#728。何度押しても失敗する状態を作らない）
+    const notCalled = options.guarded === true && permit === undefined
+    if (options.smokeTrip !== true && !notCalled && (options.allowParts === false || options.lookUp || options.guarded) && (model.source !== 'argon' || result.fellBack)) throw new Error('模型を生成できませんでした')
 
     // 固定の応答はすぐ返るので、全員の画面に「工事中」が見えるよう少し待つ（本物の生成は約 2 分かかる）
     if (result.provider === 'stub' && ports.stubDelayMs > 0) await ports.wait(ports.stubDelayMs)
@@ -89,6 +130,11 @@ export async function buildModelForPin(
     batch.set(pinRef.collection('model').doc('current'), { ...stored, createdAt: FieldValue.serverTimestamp() })
     batch.update(pinRef, { status: 'done', updatedAt: FieldValue.serverTimestamp() })
     await batch.commit()
+    const entry = libraryEntry(pin, stored)
+    if (cacheRef && entry) {
+      try { await cacheRef.set({ ...entry, createdAt: FieldValue.serverTimestamp() }) }
+      catch (cause) { console.warn('完成した模型を辞書に保存できませんでした', cause) }
+    }
   } catch (cause) {
     console.error(`ピン ${tripId}/${pinId} の模型を作れませんでした`, cause)
     await pinRef.update({ status: 'failed', updatedAt: FieldValue.serverTimestamp() })
@@ -114,7 +160,7 @@ export async function modelPermit(
   const reserved = unlockedUid ? await gate.reserveArgonCall() : false
   const decision = decideAiGate({ unlocked: unlockedUid !== undefined, reserved })
   if (decision !== 'ok' || !unlockedUid) {
-    console.info(`ピン ${pinId} の模型：本物の Gemini は使わず部品の模型にします（${decision}）`)
+    console.info(`ピン ${pinId} の模型：本物の Gemini の生成を見送ります（${decision}）`)
     return undefined
   }
   return { uid: unlockedUid, refund: () => gate.refundArgonCall() }

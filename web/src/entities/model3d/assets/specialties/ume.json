@@ -1,0 +1,1 @@
+{"version":1,"parts":[{"shape":"sphere","size":[7.4,7,7.4],"position":[0,3.6,0],"color":"#d93a4a"},{"shape":"sphere","size":[3,2.6,3],"position":[-1.6,5.2,1.8],"color":"#ef6a77"},{"shape":"cylinder","size":[0.4,1.2,0.4],"position":[0,7.5,0],"color":"#6b4a32"},{"shape":"sphere","size":[3.2,0.5,1.6],"position":[1.6,7.6,0],"rotation":[0,0,-20],"color":"#5fae4a"}]}

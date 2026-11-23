@@ -31,6 +31,8 @@ export const MAX_ZOOM = 16
 
 /** 日本全体。最初に出す範囲と、動かせる範囲の目安 */
 export const JAPAN: MapBounds = { north: 45.8, south: 30.2, east: 146.2, west: 128.8 }
+/** 沖縄まで入れた日本全体。日本の外まで動かしたときに戻る見え方 */
+export const WHOLE_JAPAN: MapBounds = { north: 45.6, south: 25.9, east: 146.0, west: 127.4 }
 
 const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max)
 
@@ -67,6 +69,18 @@ export function unproject(view: MapView, size: Size, pixel: { x: number; y: numb
   return fromWorld({ x: center.x + (pixel.x - size.width / 2) / scale, y: center.y + (pixel.y - size.height / 2) / scale })
 }
 
+/** 上の帯（top px）と下のシート（bottom px）のあいだに見えている所の、四隅の緯度経度（左上、右上、左下、右下） */
+export function visibleCorners(view: MapView, size: Size, top: number, bottom: number): LatLng[] {
+  const upper = Math.min(top, size.height)
+  const lower = Math.max(upper, size.height - bottom)
+  return [
+    { x: 0, y: upper },
+    { x: size.width, y: upper },
+    { x: 0, y: lower },
+    { x: size.width, y: lower },
+  ].map((pixel) => unproject(view, size, pixel))
+}
+
 /** 画面に映っている範囲 */
 export function boundsOf(view: MapView, size: Size): MapBounds {
   const topLeft = unproject(view, size, { x: 0, y: 0 })
@@ -81,12 +95,44 @@ export function panBy(view: MapView, dx: number, dy: number): MapView {
   return { ...view, center: fromWorld({ x: center.x + dx / scale, y: center.y + dy / scale }) }
 }
 
-/** 拡大の度合いを決めた幅に収め、真ん中が日本から大きく外れないようにする */
-export function clampView(view: MapView): MapView {
-  return {
-    zoom: clamp(view.zoom, MIN_ZOOM, MAX_ZOOM),
-    center: { lat: clamp(view.center.lat, 22, 47), lng: clamp(view.center.lng, 121, 150) },
+/**
+ * 地図の真ん中を置いてよい範囲（日本と、そのまわりの海）。沖縄・小笠原の手前から北海道まで。
+ * 西は与那国島（122.9）の先まで入れる（沖縄を選んで寄ると、真ん中が沖縄本島より西に来るため）
+ */
+const JAPAN_CENTER = { north: 46, south: 24, east: 148, west: 122.5 }
+/** 朝鮮半島と大陸の側。この経度より西で、この緯度より北は日本の外とみなす（対馬は入る） */
+const MAINLAND_WEST = { lng: 129.4, lat: 34.6 }
+
+/**
+ * 地図の真ん中が日本の外へ出ていたら、いちばん近い日本の側の位置を返す（中なら null）。
+ * 人が日本の外まで動かしたとき、地図を日本へ戻すのに使う
+ */
+export function backToJapan(center: LatLng): LatLng | null {
+  let lat = clamp(center.lat, JAPAN_CENTER.south, JAPAN_CENTER.north)
+  let lng = clamp(center.lng, JAPAN_CENTER.west, JAPAN_CENTER.east)
+  if (lng < MAINLAND_WEST.lng && lat > MAINLAND_WEST.lat) {
+    // 半島・大陸の側：東（日本海の向こうの本州・九州）へ寄せる。北すぎるところは北海道の西の海まで下げる
+    lng = MAINLAND_WEST.lng
+    lat = Math.min(lat, 42)
   }
+  return lat === center.lat && lng === center.lng ? null : { lat, lng }
+}
+
+/** 拡大の度合いを決めた幅に収め、真ん中が日本の外へ出ないようにする。minZoom は、いちばん引けるところ（旅のエリアで決めたもの。なければ MIN_ZOOM） */
+export function clampView(view: MapView, minZoom: number = MIN_ZOOM): MapView {
+  return { zoom: clamp(view.zoom, minZoom, MAX_ZOOM), center: backToJapan(view.center) ?? view.center }
+}
+
+/**
+ * 旅の地図で、いちばん引けるところの拡大の度合い（Takana の依頼、2026-11-22）。
+ * 旅のエリアの点が、padding の内側（上の帯と下のシートに隠れないところ）に全部収まる拡大の度合いから、さらに slack 段引いたところ。
+ * ぎりぎりに収めると、少し動かしただけでエリアの端が隠れるので、余裕を持たせる（0.5 段で約 1.4 倍の広さ。実装した AI が仮に選んだ）。
+ * 点がなければ null（引ける所を限らない）
+ */
+export function areaMinZoom(points: readonly LatLng[], size: Size, padding: Padding, slack = 0.5): number | null {
+  if (points.length < 2) return null
+  const fit = viewForPoints(points, size, padding, MAX_ZOOM)
+  return fit ? clamp(fit.zoom - slack, MIN_ZOOM, MAX_ZOOM) : null
 }
 
 /**
@@ -145,6 +191,23 @@ export function viewBetween(from: MapView, to: MapView, e: number): MapView {
   // 行き先の真ん中の、画面の上でのずれ（px）を (1 - e) 倍に縮める。いまの拡大の度合いで世界の位置に直す
   const k = ((1 - e) * 2 ** from.zoom) / 2 ** zoom
   return { zoom, center: fromWorld({ x: b.x - (b.x - a.x) * k, y: b.y - (b.y - a.y) * k }) }
+}
+
+/**
+ * いまいる所から先に引いて、引きながら行き先へ動く見え方（e は 0〜1）。
+ * viewBetween は画面の上のずれを縮めるので、寄ったまま遠くへ戻ると、途中の土地（北海道など）を大きく映しながら流れていく。
+ * こちらは拡大の度合いを先に下げ、真ん中は世界の上で少し遅れて動かすので、その場から引いて見える
+ */
+export function viewZoomingOut(from: MapView, to: MapView, e: number): MapView {
+  const zoomed = 1 - (1 - Math.min(1, e / 0.6)) ** 2
+  const moved = Math.min(1, Math.max(0, (e - 0.15) / 0.85))
+  const m = moved < 0.5 ? 2 * moved * moved : 1 - (-2 * moved + 2) ** 2 / 2
+  const a = toWorld(from.center)
+  const b = toWorld(to.center)
+  return {
+    zoom: from.zoom + (to.zoom - from.zoom) * zoomed,
+    center: fromWorld({ x: a.x + (b.x - a.x) * m, y: a.y + (b.y - a.y) * m }),
+  }
 }
 
 /** 2 つの見え方の真ん中が、画面の上でどれだけ離れているか（px。2 つのうち引いているほうの拡大の度合いで測る） */

@@ -1,0 +1,128 @@
+.calendar {
+  display: grid;
+  margin: 0 calc(-1 * var(--space-2));
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 40px;
+  font-size: var(--font-size-m);
+  font-weight: var(--font-weight-heading);
+}
+
+.nav {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 40px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-text);
+  cursor: pointer;
+}
+
+.nav:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+.week,
+.days {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+}
+
+.week span {
+  height: 24px;
+  display: grid;
+  place-items: center;
+  color: var(--color-text-sub);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-heading);
+}
+
+.week span:first-child {
+  color: var(--color-danger);
+}
+
+.week span:last-child {
+  color: var(--color-route);
+}
+
+.cell {
+  position: relative;
+  height: 40px;
+}
+
+/* 行く日から帰る日までをつなぐ帯 */
+.band {
+  position: absolute;
+  top: 3px;
+  bottom: 3px;
+  background: var(--color-route-soft);
+}
+
+.bandFull {
+  left: 0;
+  right: 0;
+}
+
+.bandRight {
+  left: 50%;
+  right: 0;
+}
+
+.bandLeft {
+  left: 0;
+  right: 50%;
+}
+
+.day {
+  position: absolute;
+  left: 50%;
+  top: 2px;
+  width: 36px;
+  height: 36px;
+  margin-left: -18px;
+  padding: 0;
+  border: var(--border-width) solid transparent;
+  border-radius: 50%;
+  background: none;
+  color: var(--color-text);
+  font: inherit;
+  font-size: 15px;
+  font-weight: var(--font-weight-bold);
+  cursor: pointer;
+}
+
+.sun {
+  color: var(--color-danger);
+}
+
+.sat {
+  color: var(--color-route);
+}
+
+.today {
+  border-color: var(--color-border);
+  font-weight: var(--font-weight-heading);
+}
+
+.chosen {
+  background: var(--color-route);
+  color: var(--color-text-on-color);
+  font-weight: var(--font-weight-heading);
+}
+
+.day:disabled {
+  color: var(--color-edge);
+  cursor: default;
+}
+
+.day:focus-visible {
+  outline: 3px solid var(--color-route);
+  outline-offset: 1px;
+}

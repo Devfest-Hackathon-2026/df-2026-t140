@@ -1,3 +1,4 @@
+import { translate as t } from '@/shared/lib'
 import { Component, type ErrorInfo, type ReactNode } from 'react'
 import { Button } from './Button'
 import { ErrorText, Screen } from './layout'
@@ -18,8 +19,8 @@ export class ErrorBoundary extends Component<{ children: ReactNode }, { failed: 
     if (!this.state.failed) return this.props.children
     return (
       <Screen>
-        <ErrorText>画面を表示できませんでした。開き直してください。</ErrorText>
-        <Button onClick={() => location.reload()}>開き直す</Button>
+        <ErrorText>{t('画面を表示できませんでした。開き直してください。', 'Could not display this screen. Reload the app.')}</ErrorText>
+        <Button onClick={() => location.reload()}>{t('開き直す', 'Reload')}</Button>
       </Screen>
     )
   }

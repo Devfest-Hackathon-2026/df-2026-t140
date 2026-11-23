@@ -2,6 +2,7 @@ import { onDocumentCreated } from 'firebase-functions/v2/firestore'
 import { aiGate } from '../../adapters/aiGate'
 import { firestore } from '../../adapters/firestore'
 import { gemini, needsPermit, currentProvider } from '../../adapters/gemini'
+import { placesApi } from '../../adapters/places-api'
 import { suggestPlacesForWish } from './usecase'
 
 // 希望（trips/{tripId}/wishes/{wishId}）が書かれたら、場所の候補を探してピンを書く。
@@ -14,7 +15,7 @@ export const suggestPlaces = onDocumentCreated(
   async (event) => {
     const { tripId, wishId } = event.params
     const db = firestore()
-    await suggestPlacesForWish({ db, gemini, aiGate: aiGate(db) }, tripId, wishId, {
+    await suggestPlacesForWish({ db, gemini, aiGate: aiGate(db), placesApi }, tripId, wishId, {
       guarded: needsPermit(currentProvider()),
     })
   },

@@ -1,0 +1,16 @@
+.icon {
+  position: relative;
+  display: block;
+  /* 絵は枠より大きいので、となりの名物や行の端に切られないよう、左右をあける */
+  margin-inline: 5px;
+}
+
+/* 枠の真ん中に、模型の絵を置く（絵は枠より大きい） */
+.sprite {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  translate: -50% -50%;
+  max-width: none;
+  pointer-events: none;
+}

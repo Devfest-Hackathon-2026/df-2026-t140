@@ -1,3 +1,4 @@
+import { translate as t } from '@/shared/lib'
 import { MEMBER_NAME_MAX } from '@/entities/member'
 import { Button, ErrorText, TextInput } from '@/shared/ui'
 import { useEditMyName } from '../model/useEditMyName'
@@ -17,7 +18,7 @@ export function EditMyNameForm({ tripId, currentName, onDone }: Props) {
     <form className={styles.form} onSubmit={(event) => void submit(event)} noValidate>
       <TextInput
         name="displayName"
-        aria-label="あなたの名前"
+        aria-label={t('あなたの名前', 'Your name')}
         value={name}
         maxLength={MEMBER_NAME_MAX}
         autoComplete="nickname"
@@ -25,7 +26,7 @@ export function EditMyNameForm({ tripId, currentName, onDone }: Props) {
         onChange={(event) => setName(event.target.value)}
       />
       <Button type="submit" variant="go">
-        保存
+        {t('保存', 'Save')}
       </Button>
       <div className={styles.error}>
         <ErrorText>{problem}</ErrorText>

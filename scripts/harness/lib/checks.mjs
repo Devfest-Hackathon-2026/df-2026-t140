@@ -4,7 +4,7 @@ import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import { join, posix } from 'node:path'
 import { checkArchitecture, isCodeFile } from './arch.mjs'
 import { checkBranchName, isDeployBranch, isProtectedBranch, ledgerPathFor } from './conventions.mjs'
-import { HUMANS_DIR, parseHumanTodo, validateHumanTodo } from './humans.mjs'
+import { HUMANS_DIR, parseHumanTodo, validateHumanTodo, validateProdCheckBundles } from './humans.mjs'
 import { parseLedger, STATUS, validateLedger } from './ledger.mjs'
 import { matchesAny, toPosix } from './paths.mjs'
 import { OTHER_AI_PACKAGES } from './policy.mjs'
@@ -165,11 +165,16 @@ export function runChecks({ source, cwd, branch, base, head = 'HEAD', quick = fa
   // 5. 人の判断（todo/humans/）
   const humanErrors = []
   const humanWarnings = []
+  const humanTodos = []
   for (const path of source.list([HUMANS_DIR]).filter((file) => /\.md$/.test(file) && !/\/(README|_template)\.md$/.test(file))) {
-    const result = validateHumanTodo(parseHumanTodo(source.read(path) ?? '', path))
+    const todo = parseHumanTodo(source.read(path) ?? '', path)
+    humanTodos.push(todo)
+    const result = validateHumanTodo(todo)
     humanErrors.push(...result.errors)
     humanWarnings.push(...result.warnings)
   }
+  // 本番での確認は open なものを 1 件にまとめる（todo/humans/README.md「本番に出したあとでしか確かめられないこと」）
+  humanErrors.push(...validateProdCheckBundles(humanTodos))
   push('humans', '人の判断（todo/humans/）の書き方', humanErrors.length ? 'fail' : humanWarnings.length ? 'warn' : 'ok', [...humanErrors, ...humanWarnings])
 
   // 6. 作業宣言の書き方

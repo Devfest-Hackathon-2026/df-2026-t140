@@ -25,8 +25,11 @@ export interface ShioriTravelSchedule {
 
 export type ShioriTravelResult =
   | ShioriTravelSchedule
-  /** Routes を使わない（呼べる設定でない、合言葉を通していない、聞けなかった）。画面は保存してある目安を出す */
-  | { status: 'estimate'; reason: 'off' | 'locked' | 'unavailable' }
+  /**
+   * Routes を使わない（呼べる設定でない、合言葉を通していない、聞けなかった、旅の移動手段が電車・バス）。画面は保存してある目安を出す。
+   * 電車・バスの旅は、保存してあるしおりが電車・バスの見積もり（domain/transit.ts）なので、車の Routes では計算し直さない
+   */
+  | { status: 'estimate'; reason: 'off' | 'locked' | 'unavailable' | 'transit' }
   /** 断る */
   | { status: 'not-member' }
   | { status: 'not-found' }

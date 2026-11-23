@@ -1,3 +1,4 @@
+import { translate } from '@/shared/lib'
 import { BUILD_LIMIT_PER_TRIP } from '@/entities/pin'
 import { Button, ErrorText, Icon } from '@/shared/ui'
 import { useBuild } from '../model/useBuild'
@@ -26,11 +27,11 @@ export function BuildButton({ tripId, pinId, builtCount, onRequested, retry = fa
     <div className={styles.wrap}>
       <Button variant="build" size="large" block disabled={sending || full} onClick={build}>
         <Icon name="hammer" />
-        {full ? `建築は ${BUILD_LIMIT_PER_TRIP} 棟まで` : retry ? 'もう一度、建築する！' : '建築する！'}
+        {full ? translate(`建築は ${BUILD_LIMIT_PER_TRIP} 棟まで`, `Limit: ${BUILD_LIMIT_PER_TRIP} buildings`) : retry ? translate('もう一度、建築する！', "Build again") : translate('建築する！', "Build")}
       </Button>
       {full && !problem && (
         <p className={styles.hint}>
-          この旅には、もう {BUILD_LIMIT_PER_TRIP} 棟が建っています（1 つの旅で {BUILD_LIMIT_PER_TRIP} 棟まで）。
+          {translate(`この旅には、もう ${BUILD_LIMIT_PER_TRIP} 棟が建っています（1 つの旅で ${BUILD_LIMIT_PER_TRIP} 棟まで）。`, `This trip has reached the limit of ${BUILD_LIMIT_PER_TRIP} buildings.`)}
         </p>
       )}
       <ErrorText>{problem}</ErrorText>

@@ -1,4 +1,5 @@
-import { type PointerEvent, useEffect, useEffectEvent, useImperativeHandle, useRef, useState, type WheelEvent } from 'react'
+import { type PointerEvent, useEffect, useEffectEvent, useImperativeHandle, useMemo, useRef, useState, type WheelEvent } from 'react'
+import { areaDisplayName } from '@/entities/trip'
 import { boundsOf, clampView, type MapView, panBy, project, type Size } from '../lib/mercator'
 import { REGION_POINTS } from '../lib/viewLabel'
 import type { SurfaceProps } from '../model/surface'
@@ -36,18 +37,38 @@ function gridLines(view: MapView, size: Size): { vertical: number[]; horizontal:
  * ルートの線（lines）は、ピンの緯度経度を自分たちで結んだもので、Maps の Routes や Directions の結果ではない。
  * 指やマウスで引っぱると動き、ホイールと右の ＋ − で拡大・縮小できる。
  */
-export function PlainSurface({ ref, initialView, markers, lines, onView, onBackgroundClick, onUserMove, onUserZoom }: SurfaceProps) {
+export function PlainSurface({
+  ref,
+  initialView,
+  markers,
+  lines,
+  areas,
+  onAreaClick,
+  onView,
+  onBackgroundClick,
+  onUserMove,
+  onUserZoom,
+  minZoom,
+}: SurfaceProps) {
   const frame = useRef<HTMLDivElement>(null)
-  const [view, setView] = useState(() => clampView(initialView))
+  const [rawView, setView] = useState(() => clampView(initialView, minZoom))
+  // いちばん引けるところ（旅のエリアで決める）。あとから上がったときも、描くときに収める
+  const view = useMemo(() => clampView(rawView, minZoom), [rawView, minZoom])
+  // 外から動かすとき、指やホイールで動かすときにも使うので、最新を覚えておく
+  const floor = useRef(minZoom)
+  useEffect(() => {
+    floor.current = minZoom
+  }, [minZoom])
   const [size, setSize] = useState<Size | null>(null)
   const drag = useRef<{ x: number; y: number; view: MapView; moved: boolean } | null>(null)
 
   useImperativeHandle(
     ref,
     () => ({
-      setView: (next) => setView(clampView(next)),
+      setView: (next) => setView(clampView(next, floor.current)),
       // 地図なしの表示は傾けられないので、動かすだけ
-      follow: (next) => setView(clampView(next)),
+      follow: (next) => setView(clampView(next, floor.current)),
+      fly: (next) => setView(clampView(next, floor.current)),
     }),
     [],
   )
@@ -67,8 +88,8 @@ export function PlainSurface({ ref, initialView, markers, lines, onView, onBackg
     if (size) report(view, boundsOf(view, size), size)
   }, [view, size])
 
-  // 印（ボタン）の上で押したときは、動かさない。そうしないと、印を押したことにならない
-  const onMarker = (event: PointerEvent) => (event.target as HTMLElement).closest('[data-marker]') !== null
+  // 印（ボタン）や塗った範囲の上で押したときは、動かさない。そうしないと、印を押したことにならない
+  const onMarker = (event: PointerEvent) => (event.target as Element).closest('[data-marker], [data-area]') !== null
 
   function onPointerDown(event: PointerEvent<HTMLDivElement>) {
     if (onMarker(event) || event.button !== 0) return
@@ -84,7 +105,7 @@ export function PlainSurface({ ref, initialView, markers, lines, onView, onBackg
     if (!start.moved && Math.hypot(dx, dy) < 5) return
     if (!start.moved) onUserMove?.()
     start.moved = true
-    setView(clampView(panBy(start.view, -dx, -dy)))
+    setView(clampView(panBy(start.view, -dx, -dy), floor.current))
   }
 
   function onPointerUp() {
@@ -95,7 +116,7 @@ export function PlainSurface({ ref, initialView, markers, lines, onView, onBackg
 
   function onWheel(event: WheelEvent) {
     onUserZoom?.()
-    setView((current) => clampView({ ...current, zoom: current.zoom + (event.deltaY < 0 ? 0.5 : -0.5) }))
+    setView((current) => clampView({ ...current, zoom: current.zoom + (event.deltaY < 0 ? 0.5 : -0.5) }, floor.current))
   }
 
   const grid = size ? gridLines(view, size) : null
@@ -120,12 +141,31 @@ export function PlainSurface({ ref, initialView, markers, lines, onView, onBackg
               <line key={`h${y}`} x1={0} x2={size.width} y1={y} y2={y} />
             ))}
           </svg>
+          {areas && areas.length > 0 && (
+            // 塗る範囲（旅をつくるときに選ぶ地方）。押すと onAreaClick
+            <svg className={styles.areas} width={size.width} height={size.height}>
+              {areas.map((area) => (
+                <path
+                  key={area.id}
+                  data-area={area.id}
+                  className={`${styles.area} ${styles[area.look]}`}
+                  d={area.rings
+                    .map((ring) => `M${ring.map((point) => project(view, size, point)).map(({ x, y }) => `${x},${y}`).join('L')}Z`)
+                    .join('')}
+                  onClick={onAreaClick ? () => onAreaClick(area.id) : undefined}
+                  style={onAreaClick ? undefined : { pointerEvents: 'none' }}
+                />
+              ))}
+            </svg>
+          )}
+          {/* 地方の名前。塗る範囲があるときは、範囲の札（印）が名前を兼ねるので出さない */}
           {view.zoom < 9 &&
+            !areas?.length &&
             REGION_POINTS.map((region) => {
               const { x, y } = project(view, size, region)
               return (
                 <span key={region.name} className={styles.region} style={{ transform: `translate(${x}px, ${y}px)` }}>
-                  <span>{region.name}</span>
+                  <span>{areaDisplayName(region.name)}</span>
                 </span>
               )
             })}

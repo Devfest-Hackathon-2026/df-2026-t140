@@ -21,6 +21,8 @@ out/
 .next/
 .wrangler/
 .firebase/
+# 2 組目の Emulator の設定（npm run dev:alt が firebase.json から作る）
+firebase.alt.json
 __pycache__/
 *.pyc
 .venv/

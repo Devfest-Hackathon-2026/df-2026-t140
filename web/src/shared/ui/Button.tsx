@@ -3,8 +3,8 @@ import { Link } from 'react-router'
 import { playSound, type SoundName } from '@/shared/lib'
 import styles from './Button.module.css'
 
-/** 色の意味は全画面で同じ。go：進む・探す、build：建てる、route：ルート */
-type Variant = 'plain' | 'go' | 'build' | 'route' | 'soft' | 'text' | 'danger' | 'dashed'
+/** 色の意味は全画面で同じ。go：進む・探す、build：建てる、route：ルート、destroy：消す（赤い地。取り消せない操作） */
+type Variant = 'plain' | 'go' | 'build' | 'route' | 'soft' | 'text' | 'danger' | 'destroy' | 'dashed'
 
 interface Look {
   sound?: SoundName | false

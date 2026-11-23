@@ -15,4 +15,6 @@ description: 費用、料金がかかる API、プロジェクトの方針、.en
 
 `npm run human -- done <名前> --decision "<決めた内容>" --by <決めた人> --reason "<理由>"`
 
+本番に出したあとでしか確かめられない確認（OAuth の戻り先、ホーム画面に置いたアプリでの動き、本物の地図での動き、本番の設定値など）は、done の decision に「deploy のあとで確かめる」と書いて済ませない。`add` で別の項目を作らず、`npm run human -- prod-check --title "<確かめること>" --from "#<Issue>、PR #<番号>"` で、open なまとめの 1 件（`<日付>-prod-check.md`、Issue 1 つ）に足す（Takana の指示、2026-11-22）。足したチェックには、どの画面で何をすれば OK か、うまくいかないとき何を見るかまで書き、`npm run human -- publish <名前>` で main に入れる。`add` で本番での確認を作ろうとするとガードが止め、CI も落ちる。費用の判断を伴う確認（Maps の使用量など）は別の項目にする（`todo/humans/README.md`「本番に出したあとでしか確かめられないこと」）。
+
 AI が代わりに決めて done にしない。技術の選定なら `docs/architecture/decisions.md`、企画の判断なら `docs/product/proposal.md` にも反映する。

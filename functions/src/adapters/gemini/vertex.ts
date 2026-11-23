@@ -7,7 +7,7 @@ import { ProviderConfigError, ProviderUnavailableError } from './errors'
 //
 // - 呼び出し口（index.ts）は、usecase が付けた印（GeminiPermit：合言葉と回数の上限を通した）がなければ
 //   ここを呼ばず固定の応答に戻す。ここは文を返すだけで、上限は見ない
-// - Flash（場所の候補、しおりのルート）と Argon（模型）。上限は Flash 累計 300 回、Argon 1 日 20 回・累計 80 回
+// - Flash（場所の候補、しおりのルート）と Argon（模型）。上限は Flash 累計 300 回、Argon 1 日 20 回・累計 300 回
 //   （domain/geminiBudget.ts。決定は todo/humans/2026-11-07-vertex-routes-model.md）
 // - Argon は応答が長いので、1 回の待ち時間を ARGON_TIMEOUT_MS で切る。呼び出し口が 1 回やり直すので、
 //   2 回分が建築のトリガーの打ち切り時間（features/build-model/handler.ts の 540 秒）に収まる長さにする

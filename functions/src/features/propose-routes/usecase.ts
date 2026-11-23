@@ -1,14 +1,15 @@
 import { FieldValue } from 'firebase-admin/firestore'
+import { searchingFlights } from '../../domain/flightPlanner'
 import { decideAiGate, gateCandidates } from '../../domain/geminiBudget'
-import { originLocation } from '../../domain/originPlaces'
+import { tripOrigin } from '../../domain/tripOrigin'
 import type { Pin } from '../../domain/pin'
 import { type Route, SHIORI_ROUTE_ID } from '../../domain/route'
-import { type PlanPlace, tripDays } from '../../domain/routePlan'
-import type { Trip } from '../../domain/trip'
+import { type PlanPlace, planPlace, tripDays } from '../../domain/routePlan'
+import { isConfirmed, type Trip } from '../../domain/trip'
 import type { GeminiPermit } from '../../ports/gemini'
-import { addToDecidedRoute, chooseOptions, draftShiori, enoughPlacesForShiori, placesKey } from './logic'
+import { addToDecidedRoute, chooseOptions, draftShiori, enoughPlacesForShiori, placesKey, rankRequest } from './logic'
 import type { ProposeRoutesPorts } from './ports'
-import { proposeRoutesTask } from './prompt'
+import { proposeRoutesTask, rankPlacesTask } from './prompt'
 import type { ProposeRoutesInput, UpdateRoutesResult } from './types'
 
 /** ほかの建築と重なって読み直す回数 */
@@ -35,6 +36,9 @@ export interface UpdateRoutesOptions {
  *   ほかの建築が先に作っていたら、読み直して足す側に回る
  * - 足すときは、まだ入っていない場所だけを足す。足す場所がなければ何もしない
  *
+ * 飛行機の区間（遠い区間と島への区間は、選ばなくても飛行機）があれば、作るときも足すときも、ANA・JAL の時刻表（ODPT。料金はかからない）から便を決める
+ * （押さなくても便が出るように。かめの決定、2026-11-20、#482）。時刻表を読むのは、便を探す区間があるときだけ（searchingFlights）
+ *
  * 費用：経路が vertex のときは、建った場所の持ち主（pin.uid）の誰かが合言葉を通していて（aiAccess/{uid}）、
  * Flash の累計が上限の中（usage/flash、場所の候補と同じ数）のときだけ印を付ける。印がなければ呼び出し口が
  * 固定の応答に戻す（design-principles の cost/gemini-guarded）
@@ -53,17 +57,19 @@ export async function updateRoutesForTrip(
     const [tripSnapshot, pinsSnapshot, shioriSnapshot] = await Promise.all([tripRef.get(), donePins.get(), shioriRef.get()])
     const trip = tripSnapshot.data() as Trip | undefined
     if (!trip) return 'skipped'
-    if (trip.status === 'decided' && trip.decidedRouteId) return addToShioriRoute(ports, tripId, trip.decidedRouteId)
+    if (trip.status === 'decided' && trip.decidedRouteId) return addToShioriRoute(ports, tripId, trip.decidedRouteId, options)
     if (trip.status !== 'planning' || !enoughPlacesForShiori(pinsSnapshot.size)) return 'skipped'
-    if (shioriSnapshot.exists) return addToShioriRoute(ports, tripId, SHIORI_ROUTE_ID)
+    // ルート案の Gemini をもう呼んだあと（attempt > 0。ほかの建築が先にしおりを作った）は、順位付けの Gemini を続けて呼ばない
+    // （トリガーの打ち切りは Gemini 1 回とやり直し 1 回の分。handler.ts）。外す順は自分たちの計算にする
+    if (shioriSnapshot.exists) return addToShioriRoute(ports, tripId, SHIORI_ROUTE_ID, options, attempt === 0)
 
     const input: ProposeRoutesInput = {
       tripTitle: trip.title,
-      origin: { name: trip.origin, location: originLocation(trip.origin) },
+      origin: tripOrigin(trip),
       days: tripDays(trip.startDate, trip.endDate),
       places: pinsSnapshot.docs.map((snapshot) => {
         const pin = snapshot.data() as Pin
-        return { id: snapshot.id, name: pin.name, location: pin.location, uid: pin.uid, category: pin.category }
+        return { ...planPlace(snapshot.id, pin), category: pin.category }
       }),
     }
     const key = placesKey(input.places.map((place) => place.id))
@@ -76,13 +82,21 @@ export async function updateRoutesForTrip(
           })
         : { output: proposeRoutesTask.stub(input), provider: 'stub' as const, fellBack: false }
     const chosen = chooseOptions(result, input)
-    const draft = draftShiori(chosen.options, input, chosen.proposedBy)
+    // 便を探す飛行機の区間があれば、時刻表を読んで便を決める（トランザクションの外で）
+    const draft = await searchingFlights(
+      () => ports.flights.timetable(),
+      async (search) => draftShiori(chosen.options, input, chosen.proposedBy, search(input.origin, trip.startDate, undefined)),
+    )
     if (!draft) return 'skipped'
 
     const outcome = await db.runTransaction(async (tx): Promise<UpdateRoutesResult | 'stale'> => {
       const [tripNow, pinsNow, shioriNow] = await Promise.all([tx.get(tripRef), tx.get(donePins), tx.get(shioriRef)])
-      const status = (tripNow.data() as Trip | undefined)?.status
+      const latestTrip = tripNow.data() as Trip | undefined
+      const status = latestTrip?.status
       if (status !== 'planning') return status === 'decided' ? 'stale' : 'skipped'
+      // 生成を待つあいだに集合場所や日程が変わった場合、古い出発地点のしおりを保存しない。
+      if (!latestTrip || latestTrip.origin !== trip.origin || latestTrip.startDate !== trip.startDate || latestTrip.endDate !== trip.endDate
+        || JSON.stringify(tripOrigin(latestTrip)) !== JSON.stringify(input.origin)) return 'stale'
       // ほかの建築が先に作った、計算しているあいだに建物が増えた：読み直す（次は足す側に回る）
       if (shioriNow.exists || placesKey(pinsNow.docs.map((snapshot) => snapshot.id)) !== key) return 'stale'
       const { id: _id, ...route } = draft
@@ -94,20 +108,61 @@ export async function updateRoutesForTrip(
   return 'skipped'
 }
 
+/** 建った場所（ピンの最後に変わった時刻の順）。しおりに足すときも、Gemini に順を聞くときも同じ並びにする */
+function builtPlaces(docs: readonly { id: string; data(): unknown }[]): PlanPlace[] {
+  return docs
+    .map((snapshot) => ({ id: snapshot.id, pin: snapshot.data() as Pin }))
+    .sort((left, right) => left.pin.updatedAt.toMillis() - right.pin.updatedAt.toMillis() || left.id.localeCompare(right.id))
+    .map(({ id, pin }) => planPlace(id, pin))
+}
+
+/**
+ * 建った場所を足すとしおりが時間に収まらなくなるなら、Gemini に残したい順を聞く（#622）。収まるなら呼ばない（undefined）。
+ * トランザクションの外で 1 回だけ読む。読んだあとに建物が増えて順が合わなくなっても、addToDecidedRoute が自分たちの計算の順に戻す。
+ * 費用：経路が vertex のときは、ルート案と同じ関所（routesPermit）を通ったときだけ本物を呼ぶ。通らなければ固定の応答（空の順）
+ */
+async function askRanking(ports: ProposeRoutesPorts, tripId: string, routeId: string, options: UpdateRoutesOptions): Promise<string[] | undefined> {
+  const tripRef = ports.db.collection('trips').doc(tripId)
+  const [tripSnapshot, routeSnapshot, pinsSnapshot] = await Promise.all([
+    tripRef.get(),
+    tripRef.collection('routes').doc(routeId).get(),
+    tripRef.collection('pins').where('status', '==', 'done').get(),
+  ])
+  const trip = tripSnapshot.data() as Trip | undefined
+  const route = routeSnapshot.data() as Route | undefined
+  if (!trip || !route || isConfirmed(trip)) return undefined
+  const places = builtPlaces(pinsSnapshot.docs)
+  const input = rankRequest(route, places, tripOrigin(trip), tripDays(trip.startDate, trip.endDate), trip.title)
+  if (!input) return undefined
+  const permit = options.guarded ? await routesPermit(ports, places.map((place) => place.uid), tripId) : undefined
+  const result = await ports.gemini.run(rankPlacesTask, input, { permit })
+  return result.output.ranking
+}
+
 /**
  * しおりのルートに、建った場所を足す（企画書「ユーザー体験」2-4）。
  * 今のルートの順番は変えず、移動がいちばん増えない位置に入れる。画面は、ルートの revision が増えたのを見て知らせる。
+ * 足すと時間に収まらないときは、場所をしおりから外す（外す順は Gemini の残したい順。askRanking。#622）。
  *
  * 1 つのトランザクションで、ルートと建った場所を読み、まだ入っていない場所だけを足す。
  * 同じイベントが 2 回届いても、2 回目は足す場所がないので何もしない。
+ * 足したあとに便を探す飛行機の区間があれば、時刻表を読んでからトランザクションをやり直す（searchingFlights）。
  */
-async function addToShioriRoute(ports: ProposeRoutesPorts, tripId: string, routeId: string): Promise<UpdateRoutesResult> {
+async function addToShioriRoute(
+  ports: ProposeRoutesPorts,
+  tripId: string,
+  routeId: string,
+  options: UpdateRoutesOptions,
+  askGemini = true,
+): Promise<UpdateRoutesResult> {
   const { db } = ports
   const tripRef = db.collection('trips').doc(tripId)
-  return db.runTransaction(async (tx): Promise<UpdateRoutesResult> => {
+  const ranking = askGemini ? await askRanking(ports, tripId, routeId, options) : undefined
+  return searchingFlights(() => ports.flights.timetable(), (search) => db.runTransaction(async (tx): Promise<UpdateRoutesResult> => {
     const tripSnapshot = await tx.get(tripRef)
     const trip = tripSnapshot.data() as Trip | undefined
-    if (!trip) return 'skipped'
+    // 旅程が確定しているあいだは、しおりに場所を足さない（features/confirm-shiori。確定は、作っている途中の建物がないときだけ受ける）
+    if (!trip || isConfirmed(trip)) return 'skipped'
     const routeRef = tripRef.collection('routes').doc(routeId)
     const [routeSnapshot, pinsSnapshot] = await Promise.all([
       tx.get(routeRef),
@@ -116,20 +171,20 @@ async function addToShioriRoute(ports: ProposeRoutesPorts, tripId: string, route
     const route = routeSnapshot.data() as Route | undefined
     if (!route) return 'skipped'
     // 建った順（ピンが最後に変わった時刻の順）に足す
-    const places: PlanPlace[] = pinsSnapshot.docs
-      .map((snapshot) => ({ id: snapshot.id, pin: snapshot.data() as Pin }))
-      .sort((left, right) => left.pin.updatedAt.toMillis() - right.pin.updatedAt.toMillis() || left.id.localeCompare(right.id))
-      .map(({ id, pin }) => ({ id, name: pin.name, location: pin.location, uid: pin.uid }))
+    const places = builtPlaces(pinsSnapshot.docs)
+    const origin = tripOrigin(trip)
     const update = addToDecidedRoute(
       route,
       places,
-      { name: trip.origin, location: originLocation(trip.origin) },
+      origin,
       tripDays(trip.startDate, trip.endDate),
+      search(origin, trip.startDate, route.legFlights),
+      ranking,
     )
     if (!update) return 'skipped'
     tx.update(routeRef, { ...update, updatedAt: FieldValue.serverTimestamp() })
     return 'rerouted'
-  })
+  }))
 }
 
 /**

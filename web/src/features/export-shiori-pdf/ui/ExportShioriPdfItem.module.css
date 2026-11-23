@@ -1,0 +1,26 @@
+/* PDF に入れるアイコンの元。画面には出さない */
+.iconSource {
+  display: none;
+}
+
+/* PDF を作っているあいだの小さな回る輪 */
+.spinner {
+  width: 20px;
+  height: 20px;
+  border: 3px solid var(--color-border);
+  border-top-color: var(--color-go);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spinner {
+    animation-duration: 2.4s;
+  }
+}

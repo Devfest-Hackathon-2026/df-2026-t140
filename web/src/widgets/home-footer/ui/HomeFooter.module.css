@@ -1,0 +1,49 @@
+/* ホームとコレクションの下のフッター。画面の下に固定し、ページの枠（幅 480px まで）に合わせる */
+.footer {
+  position: fixed;
+  left: 50%;
+  bottom: 0;
+  z-index: 5;
+  display: flex;
+  width: 100%;
+  max-width: 480px;
+  padding: var(--space-1) var(--space-5) calc(var(--space-1) + env(safe-area-inset-bottom));
+  border-top: var(--border-width) solid var(--color-border);
+  background: var(--color-surface);
+  transform: translateX(-50%);
+}
+
+.tab {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-height: var(--tap-size);
+  color: var(--color-text-sub);
+  font-size: 11px;
+  font-weight: var(--font-weight-heading);
+}
+
+.icon {
+  display: grid;
+  place-items: center;
+  width: 60px;
+  height: 30px;
+  border-radius: var(--radius-pill);
+}
+
+.current {
+  color: var(--color-go-edge);
+}
+
+.current .icon {
+  background: var(--color-go-soft);
+}
+
+/* フッターの高さぶんの余白。画面の一番下に置く */
+.spacer {
+  flex: none;
+  height: calc(var(--tap-size) + var(--space-2));
+}

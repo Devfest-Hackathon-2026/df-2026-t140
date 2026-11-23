@@ -16,6 +16,9 @@ export const SPRITE_ORIGIN = { x: 0.5, y: TOP / (TOP - BOTTOM) }
 /** 絵の幅に入る模型の単位の数。本物の地図で、絵と同じ大きさに見せるのに使う */
 export const SPRITE_UNITS_ACROSS = HALF_WIDTH * 2
 
+/** 回して見せるとき（ModelTurntable）も、止まった絵と同じ範囲を写す。どの向きでも模型の箱が収まる */
+export const TURNTABLE_FRAME = { halfWidth: HALF_WIDTH, bottom: BOTTOM, top: TOP }
+
 const PIXELS = 256
 
 interface Studio {
@@ -59,22 +62,24 @@ export function addLights(parent: Object3D): void {
   parent.add(sun)
 }
 
-/** 模型 → 向き（度）ごとの絵 */
-const cache = new WeakMap<ModelJson, Map<number, string | null>>()
+/** 模型 → 向き（度）と影のあるなしごとの絵 */
+const cache = new WeakMap<ModelJson, Map<string, string | null>>()
 
 /**
  * 模型の絵（PNG の data URL）。同じ模型・同じ向きは 1 回だけ描く。WebGL が使えなければ null。
- * yaw は、模型を上から見て反時計回りに回す角度（度。y の軸まわり）。しおりの再生で、車を走る向きに向けるのに使う
+ * yaw は、模型を上から見て反時計回りに回す角度（度。y の軸まわり）。しおりの再生で、車を走る向きに向けるのに使う。
+ * withShadow が false なら、下の影を描かない（地面から浮かせて出すとき）
  */
-export function renderModelSprite(model: ModelJson, yaw = 0): string | null {
-  const byYaw = cache.get(model) ?? new Map<number, string | null>()
+export function renderModelSprite(model: ModelJson, yaw = 0, withShadow = true): string | null {
+  const byYaw = cache.get(model) ?? new Map<string, string | null>()
   cache.set(model, byYaw)
-  const cached = byYaw.get(yaw)
+  const key = `${yaw}/${withShadow ? 'shadow' : 'bare'}`
+  const cached = byYaw.get(key)
   if (cached !== undefined) return cached
 
   const opened = openStudio()
   if (!opened) return null
-  const object = buildModelObject(model)
+  const object = buildModelObject(model, withShadow)
   object.rotation.y = (yaw * Math.PI) / 180
   let url: string | null = null
   try {
@@ -87,6 +92,6 @@ export function renderModelSprite(model: ModelJson, yaw = 0): string | null {
     opened.scene.remove(object)
     disposeModelObject(object)
   }
-  byYaw.set(yaw, url)
+  byYaw.set(key, url)
   return url
 }

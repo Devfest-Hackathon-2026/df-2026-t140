@@ -151,7 +151,8 @@ test('フック：編集したファイルの場所が別の書き方（シン�
   // macOS では一時フォルダが /var と /private/var の 2 通りに書かれ、git は後者を返す。Linux の CI でも同じ食い違いを作るため、
   // 見本のプロジェクトへのリンクを経由した場所で編集したことにする
   const link = `${root}-link`
-  symlinkSync(root, link)
+  // Windows では、管理者の権限がなくても作れるジャンクションにする（フォルダへのリンクとして同じに働く）
+  symlinkSync(root, link, process.platform === 'win32' ? 'junction' : 'dir')
   try {
     const out = postEdit({ file_path: `${link}/${PAGE}`, old_string: 'NOT_FOUND_TITLE', new_string: pageCopy })
     assert.match(out?.hookSpecificOutput?.additionalContext ?? '', /yomiyasu/, 'リンク経由の場所で、web/src の文言だと見分けられなかった')

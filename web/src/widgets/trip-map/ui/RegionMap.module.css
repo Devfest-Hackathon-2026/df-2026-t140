@@ -1,0 +1,87 @@
+/* 地方を選ぶ画面の地図が入る場所。親（地方を選ぶ画面）いっぱいに広がる */
+.map {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background: var(--color-map-water);
+  /* 地図の印の重なり順（z-index）を、この中だけに閉じる。上の帯と下のシートは、いつも地図より手前 */
+  isolation: isolate;
+}
+
+/* 地図なしの表示のときの断り書き（開発のときだけ） */
+.note {
+  position: absolute;
+  left: var(--space-3);
+  bottom: calc(var(--map-bottom-inset, 0px) + var(--space-1));
+  margin: 0;
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-s);
+  background: rgb(255 255 255 / 80%);
+  color: var(--color-text-sub);
+  font-size: 11px;
+  font-weight: var(--font-weight-bold);
+  pointer-events: none;
+  z-index: 2000;
+}
+
+/* 選んだ地方の名札。親は地方のまん中を指す大きさ 0 の点。札は点の上に、ぽんと立つ */
+.label {
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  /* 重なるときにずらす量（RegionMap.tsx の placeLabels） */
+  translate: var(--label-dx, 0px) var(--label-dy, 0px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transform: translateX(-50%);
+  transform-origin: 50% 100%;
+  pointer-events: none;
+  animation: label-pop 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.labelText {
+  padding: 3px 9px;
+  border: var(--border-width) solid var(--color-go-edge);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface);
+  box-shadow: 0 2px 0 var(--color-go-edge);
+  color: var(--color-go-edge);
+  font-size: 12px;
+  font-weight: var(--font-weight-heading);
+  white-space: nowrap;
+}
+
+/* 札の下の三角（地方のまん中を指す） */
+.label::after {
+  content: '';
+  width: 0;
+  height: 0;
+  margin-top: 1px;
+  border-left: 7px solid transparent;
+  border-right: 7px solid transparent;
+  border-top: 8px solid var(--color-go-edge);
+}
+
+/* 横や下へずらした名札は、点を指す三角を出さない */
+.labelBeside::after {
+  display: none;
+}
+
+@keyframes label-pop {
+  0% {
+    transform: translateX(-50%) scale(0) translateY(12px);
+  }
+  60% {
+    transform: translateX(-50%) scale(1.15) translateY(-3px);
+  }
+  100% {
+    transform: translateX(-50%) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .label {
+    animation: none;
+  }
+}

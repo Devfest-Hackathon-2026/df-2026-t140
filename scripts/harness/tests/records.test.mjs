@@ -4,12 +4,31 @@ import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { test } from 'node:test'
-import { checkBranchName, checkCommitMessage, ledgerPathFor } from '../lib/conventions.mjs'
-import { markHumanDone, parseHumanTodo, renderHumanTemplate, validateHumanTodo } from '../lib/humans.mjs'
+import { checkBranchName, checkCommitMessage, isWipPr, ledgerPathFor } from '../lib/conventions.mjs'
+import {
+  appendProdCheck,
+  isProdCheckBundle,
+  looksLikeProdCheck,
+  markHumanDone,
+  parseHumanTodo,
+  renderHumanTemplate,
+  renderProdCheckBundle,
+  validateHumanTodo,
+  validateProdCheckBundles,
+} from '../lib/humans.mjs'
 import { parseIssueNumber, parseLedger, renderLedgerTemplate, validateLedger } from '../lib/ledger.mjs'
 import { globsOverlap, matchesAny } from '../lib/paths.mjs'
 import { readAutonomy } from '../lib/autonomy.mjs'
 import { forbiddenFileReason, scanAddedLines, scanText } from '../lib/secrets.mjs'
+
+test('作業中の PR：ドラフトか「作業中」ラベルなら作業中（gh の {name} の形と、文字列の形のどちらも読む）', () => {
+  assert.equal(isWipPr({ isDraft: true, labels: [] }), true)
+  assert.equal(isWipPr({ isDraft: false, labels: [{ name: '作業中' }] }), true) // work-index（gh pr list の形）
+  assert.equal(isWipPr({ isDraft: false, labels: ['作業中'] }), true) // hook（名前だけにした形）
+  assert.equal(isWipPr({ isDraft: false, labels: [{ name: 'bug' }] }), false)
+  assert.equal(isWipPr({ isDraft: false }), false)
+  assert.equal(isWipPr(undefined), false)
+})
 
 test('ブランチ名：これまでの名前は通し、決まりに合わない名前は止める', () => {
   for (const name of ['chore/local-prod-parity', 'docs/screen-flow', 'docs/ui-meeting-2026-11-06', 'feat/trip-create', 'fix/pin-sync']) {
@@ -93,6 +112,46 @@ test('人の判断：open は問いが要り、done は決めた内容・人・�
   const fakeDone = asked.replace('status: open', 'status: done')
   assert.ok(validateHumanTodo(parseHumanTodo(fakeDone, 'todo/humans/x.md')).errors.length >= 3, 'done なのに誰が何を決めたかがない')
   assert.ok(validateHumanTodo(parseHumanTodo(asked.replace('kind: 有料API', 'kind: なんでも'), 'x')).errors.length > 0)
+})
+
+test('本番での確認：open なまとめは 1 件だけで、確かめることは続きの番号で足し、別の項目は止める', () => {
+  const bundle = renderProdCheckBundle({ id: '2026-11-22-prod-check', askedBy: 'chore/x（AI、Takana の端末）', created: '2026-11-22', issue: '627' })
+  const parsed = parseHumanTodo(bundle, 'todo/humans/2026-11-22-prod-check.md')
+  assert.ok(isProdCheckBundle(parsed))
+  assert.equal(parsed.issue, '627')
+  // 前の名前の付け方（個別の確認に -prod-check）は、まとめとして扱わない
+  assert.equal(isProdCheckBundle({ id: '2026-11-21-shiori-confirm-prod-check', title: '#504 を本番に出したあと…' }), false)
+  assert.equal(isProdCheckBundle({ id: '2026-11-22-prod-check', title: '別の題' }), false)
+  assert.equal(isProdCheckBundle({ ...parsed, id: '2026-11-22-prod-check-2' }), true)
+  assert.deepEqual(validateHumanTodo(parsed).errors, [], 'ひな形のままで「決めてほしいこと」が埋まっている')
+
+  const once = appendProdCheck(bundle, { heading: '旅の再生の一時停止', from: '#374、PR #471' })
+  const twice = appendProdCheck(once, { heading: 'PWA でしおりを開く' })
+  const asked = parseHumanTodo(twice, 'x').sections['決めてほしいこと']
+  assert.match(asked, /### 1\. 旅の再生の一時停止（#374、PR #471）\n\n- \[ \] /)
+  assert.match(asked, /### 2\. PWA でしおりを開く\n\n- \[ \]$/)
+  assert.ok(twice.indexOf('### 2.') < twice.indexOf('## 背景'), '背景より前に足す')
+
+  // 題で見分ける：その他の本番・実機の確認だけ。費用（Maps の使用量）や、確認でない題は対象外
+  assert.equal(looksLikeProdCheck({ title: 'iPhone の Safari で、しおりの拡大が戻るかを確かめる', kind: 'その他' }), true)
+  assert.equal(looksLikeProdCheck({ title: '#504 を本番に出したあと、確定を確かめる', kind: 'その他' }), true)
+  assert.equal(looksLikeProdCheck({ title: '本番に出したあと、Map Loads が上限に収まっているかを確かめる', kind: '費用' }), false)
+  assert.equal(looksLikeProdCheck({ title: 'イベントの情報源を何にするか', kind: 'その他' }), false)
+
+  const other = (title, extra = '') =>
+    parseHumanTodo(
+      renderHumanTemplate({ id: '2026-11-23-pwa', title, kind: 'その他', askedBy: 'feat/x', created: '2026-11-23' }).replace(/(## 決めてほしいこと\n\n)<!--[^]*?-->/, `$1確かめてほしい${extra}`),
+      'todo/humans/2026-11-23-pwa.md',
+    )
+  assert.deepEqual(validateProdCheckBundles([parsed]), [])
+  assert.equal(validateProdCheckBundles([parsed, other('PWA で開いて確かめる')]).length, 1, '別の項目で本番の確認を頼まない')
+  assert.deepEqual(validateProdCheckBundles([parsed, other('PWA で開いて確かめる', '\n\n@harness-exception prod-check-bundle 本番でなく手元の確認')]), [])
+  assert.equal(validateProdCheckBundles([parsed, other('PWA で開いて確かめる', '\n\n@harness-exception prod-check-bundle （本番での確認でない理由）')]).length, 1, '仮の理由のままでは外さない')
+  assert.equal(validateProdCheckBundles([parsed, other('PWA で開いて確かめる', '\n\n@harness-exception prod-check-bundle')]).length, 1, '理由が空なら外さない')
+  const second = parseHumanTodo(bundle.replaceAll('2026-11-22-prod-check', '2026-11-23-prod-check'), 'todo/humans/2026-11-23-prod-check.md')
+  assert.equal(validateProdCheckBundles([parsed, second]).length, 1, 'まとめが 2 件 open')
+  const closed = parseHumanTodo(markHumanDone(bundle, { decision: '全部 OK', decidedBy: 'Takana', decidedAt: '2026-11-23' }), 'todo/humans/2026-11-22-prod-check.md')
+  assert.deepEqual(validateProdCheckBundles([closed, second, { ...other('PWA で開いて確かめる'), status: 'done' }]), [], 'done になったものは数えない')
 })
 
 test('秘密情報：本物に見える値と、置いてはいけないファイルを見つける', () => {

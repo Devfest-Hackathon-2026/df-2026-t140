@@ -1,0 +1,1 @@
+export { moveMemberships } from './handler'

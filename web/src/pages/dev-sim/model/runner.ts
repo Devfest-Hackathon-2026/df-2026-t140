@@ -1,5 +1,7 @@
 // 台本（config/scenario.json）を、3 つの画面の本物の UI を操作して進める。
 // 各段は、本当の状態（要素や文字が出ること）を待つ。時間切れなら止まり、どの段で止まったかを残す。
+import { REGION_NAMES, type RegionId } from '@/entities/trip'
+import { addDays, nights, today } from '@/shared/lib'
 import scenario from '../config/scenario.json'
 import { type Doc, findControl, findControlContaining, findInput, hasLabel, hasText, press, shioriText, typeInto } from './dom'
 
@@ -150,6 +152,16 @@ export class Runner {
     await this.act()
   }
 
+  /** 旅をつくる画面のカレンダーで、その日（YYYY-MM-DD）を押す。見えている月になければ、次の月へ送る */
+  private async pickDate(date: string): Promise<void> {
+    const [year, month, day] = date.split('-').map(Number)
+    const label = `${year}年${month}月${day}日`
+    // カレンダーが出るまで待ってから探す（出る前に月を送らないように）
+    await this.until('カレンダー', () => findControl(this.doc('a'), '次の月'))
+    for (let i = 0; i < 24 && !findControl(this.doc('a'), label, false); i++) await this.pressControl('a', '次の月')
+    await this.pressControl('a', label, false)
+  }
+
   private tripPath(): string {
     const pathname = this.frames.a.getWindow()?.location.pathname ?? ''
     const match = /^\/t\/[^/]+/.exec(pathname)
@@ -170,12 +182,27 @@ export class Runner {
     switch (stepId) {
       case 'create': {
         this.frames.a.open('/new')
-        await this.fill('a', '旅のタイトル', trip.title)
-        await this.fill('a', '開始日', trip.startDate)
-        await this.fill('a', '終了日', trip.endDate)
+        // 1 問ずつ答える（S01）
+        // 日程：カレンダーを行く日の月まで送り、行く日と帰る日を押す
+        // カレンダーは今日より前を押せないので、台本の日付はそのまま使わず、今日の 1 週間後から台本と同じ泊数にする
+        const startDate = addDays(today(), 7)
+        await this.pickDate(startDate)
+        await this.pickDate(addDays(startDate, nights(trip.startDate, trip.endDate)))
+        await this.pressControl('a', 'つぎへ')
         await this.fill('a', '出発地', trip.origin)
-        await this.fill('a', 'あなたの名前', MEMBERS[0].name)
-        await this.pressControl('a', '旅を計画する')
+        await this.pressControl('a', 'つぎへ')
+        await this.pressControl('a', '電車・バス')
+        await this.pressControl('a', 'つぎへ')
+        await this.fill('a', '旅の名前', trip.title)
+        // 名前を覚えていないときだけ、旅の名前のあとに名前を聞かれる
+        if (findControl(this.doc('a'), 'つぎへ')) {
+          await this.pressControl('a', 'つぎへ')
+          await this.fill('a', 'あなたの名前', MEMBERS[0].name)
+        }
+        // 大まかな場所：場所を選ぶ画面を開き、一覧の地方の行を押して、出発する
+        await this.pressControl('a', '行き先をえらぶ')
+        for (const region of trip.regions) await this.pressControl('a', REGION_NAMES[region as RegionId])
+        await this.pressControl('a', 'ここへ出発！')
         await this.until('招待のシート', () => findControl(this.doc('a'), '閉じる'))
         return
       }
@@ -198,7 +225,7 @@ export class Runner {
         const id = stepId.slice(-1)
         const wish = wishOf(id)
         await this.fill(id, 'この旅でやりたいこと', wish.text)
-        await this.pressControl(id, 'この範囲でさがす')
+        await this.pressControl(id, 'さがす')
         await this.until(`${wish.build}のピン`, () => findControl(this.doc(id), wish.build, false))
         // 候補のピンは、希望を書いた本人の地図にだけ出る。少し待って、ほかの人の地図に出ていないことを確かめる
         await new Promise((resolve) => setTimeout(resolve, 1500))
@@ -231,7 +258,7 @@ export class Runner {
         return
       }
       case 'place-back':
-        await this.pressControl('a', 'しおり')
+        await this.pressControl('a', 'しおりに戻る')
         await this.until('しおり', () => shioriText(this.doc('a')).length > 0)
         return
       case 'back-to-map':

@@ -3,32 +3,52 @@
   gap: var(--space-3);
 }
 
-.linkBox {
-  display: flex;
+/* 旅の合言葉。リンクを開けない人（ホーム画面に置いたアプリの中など）に、口や文字で伝える */
+.codeBox {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  gap: var(--space-2);
-  min-width: 0;
-  padding: var(--space-2) var(--space-2) var(--space-2) var(--space-3);
-  border: var(--border-width) dashed var(--color-edge);
+  gap: var(--space-1) var(--space-2);
+  padding: var(--space-2) var(--space-2) var(--space-3) var(--space-3);
+  border: var(--border-width) solid var(--color-border);
   border-radius: var(--radius-m);
-  background: var(--color-surface-sunken);
+  background: var(--color-surface);
+}
+
+.codeText {
+  display: grid;
+  min-width: 0;
+}
+
+.codeLabel {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
   color: var(--color-text-sub);
 }
 
-.url {
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  font-size: var(--font-size-s);
-  font-weight: var(--font-weight-bold);
-  text-overflow: ellipsis;
-  white-space: nowrap;
+/* 1 文字ずつ読めるよう、字の間をあける */
+.code {
+  font-size: var(--font-size-l);
+  font-weight: var(--font-weight-heading);
+  letter-spacing: 0.18em;
+  user-select: all;
 }
 
+.codePending {
+  font-size: var(--font-size-s);
+  line-height: 30px;
+  color: var(--color-text-sub);
+}
+
+/* 共有のボタンを広く、QR コードのボタンを右に正方形で置く */
 .actions {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: minmax(0, 1fr) auto;
   gap: var(--space-3);
+}
+
+.actions [aria-expanded='true'] {
+  border-color: var(--color-go);
 }
 
 .qr {

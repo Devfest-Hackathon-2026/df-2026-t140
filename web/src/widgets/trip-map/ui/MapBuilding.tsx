@@ -1,8 +1,10 @@
+import { pinDisplayName } from '@/entities/pin'
+import { translate } from '@/shared/lib'
 import { Avatar, type Member } from '@/entities/member'
 import { type ModelJson, ModelSprite } from '@/entities/model3d'
 import type { Pin } from '@/entities/pin'
 import { Icon } from '@/shared/ui'
-import { badgeOffset, buildingLabelTop } from '../lib/declutter'
+import { badgeOffset, buildingLabelTop, doneLeft } from '../lib/declutter'
 import styles from './MapBuilding.module.css'
 
 type Person = Pick<Member, 'displayName' | 'color'>
@@ -19,7 +21,7 @@ interface SiteProps {
 export function MapBuildingSite({ pin, builder, labelHidden = false }: SiteProps) {
   return (
     <>
-      <span className={styles.site} role="img" aria-label={`${pin.name}（建築中）`}>
+      <span className={styles.site} role="img" aria-label={translate(`${pinDisplayName(pin)}（建築中）`, `Building ${pinDisplayName(pin)}`)}>
         <span className={styles.siteRing} />
         <span className={styles.siteIcon}>
           <Icon name="hammer" size={22} />
@@ -27,8 +29,8 @@ export function MapBuildingSite({ pin, builder, labelHidden = false }: SiteProps
       </span>
       {!labelHidden && (
         <span className={`${styles.label} ${styles.labelBuilding}`}>
-          <span className={styles.name}>{pin.name}</span>
-          <span className={styles.state}>建築中</span>
+          <span className={styles.name}>{pinDisplayName(pin)}</span>
+          <span className={styles.state}>{translate('建築中', "Building")}</span>
           {builder && <Avatar member={builder} size={18} />}
         </span>
       )}
@@ -64,7 +66,7 @@ const MIN_TAP = 32
 
 /** 建った建物。押すと場所カードが出る。名札に、場所の名前と、誰の希望かを出す */
 export function MapBuilding({ pin, wisher, sprite, size, selected, celebrating, order, labelHidden = false, count = 1, onSelect }: BuiltProps) {
-  const who = wisher ? `${wisher.displayName}の希望` : '希望'
+  const who = wisher ? translate(`${wisher.displayName}の希望`, `${wisher.displayName}'s wish`) : translate('希望', "Wish")
   const badge = badgeOffset(size)
   return (
     <>
@@ -76,7 +78,7 @@ export function MapBuilding({ pin, wisher, sprite, size, selected, celebrating, 
         type="button"
         className={styles.building}
         style={{ width: Math.max(size * 0.72, MIN_TAP), height: Math.max(size * 0.62, MIN_TAP) }}
-        aria-label={`${pin.name}（${who}から建った建物${order ? `、${order} 番目` : ''}${count > 1 ? `。近くの ${count - 1} か所もこの建物にまとめて表示しています` : ''}）`}
+        aria-label={translate(`${pinDisplayName(pin)}（${who}から建った建物${order ? `、${order} 番目` : ''}${count > 1 ? `。近くの ${count - 1} か所もこの建物にまとめて表示しています` : ''}）`, `${pinDisplayName(pin)}, built from ${who}${order ? `, stop ${order}` : ''}${count > 1 ? `. Includes ${count - 1} nearby places` : ''}`)}
         aria-pressed={selected}
         onClick={onSelect}
       >
@@ -93,17 +95,17 @@ export function MapBuilding({ pin, wisher, sprite, size, selected, celebrating, 
       )}
       {celebrating && (
         // 建ったばかりの状態の印（S07）。押せないので、ボタンの形にせず、役割もフォーカスも付けない（#225）
-        <span className={styles.done} style={{ top: -size * 0.62 }}>
+        <span className={styles.done} style={{ left: doneLeft(size, count), top: -size * 0.62 }}>
           <span className={styles.doneMark} aria-hidden="true">
             <Icon name="check" size={14} />
           </span>
-          建築完了
+          {translate('建築完了', "Build complete")}
         </span>
       )}
       {!labelHidden && (
         <span className={selected ? `${styles.label} ${styles.labelSelected}` : styles.label} style={{ top: buildingLabelTop(size) }}>
           {order !== undefined && <span className={styles.order}>{order}</span>}
-          <span className={styles.name}>{pin.name}</span>
+          <span className={styles.name}>{pinDisplayName(pin)}</span>
           {wisher && !selected && <Avatar member={wisher} size={18} />}
         </span>
       )}

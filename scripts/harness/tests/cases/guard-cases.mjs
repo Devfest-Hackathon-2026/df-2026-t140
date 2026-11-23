@@ -31,7 +31,9 @@ export const ALLOW = [
   'gh pr create --draft --title "feat: 旅の作成" --body x',
   'gh pr view 12 --json files',
   'gh pr merge 12 --merge', // 作業宣言だけの PR
-  'gh pr merge 20 --merge', // ドラフトでなく、CI が通り、ぶつからず、レビューで承認された
+  'gh pr merge 20 --merge', // ドラフトでなく、手元の確認の記録があり、ぶつからず、レビューで承認された
+  'gh pr merge 18 --merge', // CI が順番待ちでも、手元の確認の記録があれば（CI は deploy のときにまとめて。2026-11-22）
+  'gh pr merge 23 --merge', // 作業中ではないラベルが付いている
   'gh pr merge 21 --squash', // 人が承認した
   'gh pr comment 12 --body-file .harness/review/pr-12/review.md',
   'gh pr list --state open',
@@ -143,11 +145,12 @@ export const DENY = [
   ['git checkout -b feature/trip', 'branch-name'],
   ['git push -u origin my-branch', 'branch-name'],
   ['gh pr merge 13 --merge', 'no-ai-merge'], // レビューがない
-  ['gh pr merge 14 --merge', 'no-ai-merge'], // CI が落ちている
+  ['gh pr merge 14 --merge', 'no-ai-merge'], // CI が走って落ちている
   ['gh pr merge 15 --merge', 'no-ai-merge'], // ドラフト
+  ['gh pr merge 22 --merge', 'no-ai-merge'], // 作業中ラベル
   ['gh pr merge 16 --merge', 'no-ai-merge'], // main とぶつかる
   ['gh pr merge 17 --merge', 'no-ai-merge'], // レビューのあとに commit が増えた
-  ['gh pr merge 18 --merge', 'no-ai-merge'], // CI が終わっていない
+  ['gh pr merge 24 --merge', 'no-ai-merge'], // 手元の確認の記録がない
   ['gh pr merge 19 --merge', 'no-ai-merge'], // レビューの結論が REQUEST_CHANGES
   ['gh pr merge 99 --squash', 'no-ai-merge'], // PR を確かめられない
   ['gh pr merge 20 --admin --merge', 'no-ai-merge'], // 確認を飛ばす
@@ -160,6 +163,9 @@ export const DENY = [
   ['firebase hosting:channel:deploy preview', 'no-deploy'],
   ['npm run deploy', 'no-deploy'],
   ['npm run smoke:prod', 'no-deploy'],
+  ['npm run release', 'no-deploy'],
+  ['npm run release -- --yes', 'no-deploy'],
+  ['node scripts/harness/release.mjs --yes', 'no-deploy'],
   ['gcloud functions deploy pingGemini', 'no-deploy'],
   ['gh workflow run deploy.yml', 'no-deploy'],
   ['USE_REAL_GEMINI=true npm run dev', 'no-paid-api'],

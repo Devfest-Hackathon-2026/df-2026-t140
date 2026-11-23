@@ -55,8 +55,8 @@ const OUTPUT_RULES =
   '- ツールは使わない。ファイルの読み書き、コマンドの実行、作業計画や作業報告はしない。\n' +
   '- 有効な JSON だけを出力する。コードフェンス、説明文、前置き、末尾の補足は付けない。\n'
 
-function expandHome(path: string): string {
-  return path.startsWith('~/') ? join(process.env.HOME ?? '', path.slice(2)) : path
+function expandHome(path: string, env: NodeJS.ProcessEnv = process.env): string {
+  return path.startsWith('~/') ? join(env.HOME ?? env.USERPROFILE ?? '', path.slice(2)) : path
 }
 
 function isExecutable(path: string): boolean {
@@ -72,15 +72,21 @@ function isExecutable(path: string): boolean {
 export function findAgy(env: NodeJS.ProcessEnv = process.env): string | null {
   const fromEnv = env.AGY_BIN?.trim()
   if (fromEnv) {
-    const path = expandHome(fromEnv)
+    const path = expandHome(fromEnv, env)
     return isExecutable(path) ? path : null
   }
   for (const dir of (env.PATH ?? '').split(delimiter).filter(Boolean)) {
-    const path = join(dir, 'agy')
+    for (const name of process.platform === 'win32' ? ['agy.exe', 'agy'] : ['agy']) {
+      const path = join(dir, name)
+      if (isExecutable(path)) return path
+    }
+  }
+  if (process.platform === 'win32' && env.LOCALAPPDATA) {
+    const path = join(env.LOCALAPPDATA, 'agy', 'bin', 'agy.exe')
     if (isExecutable(path)) return path
   }
   for (const candidate of CANDIDATE_PATHS) {
-    const path = expandHome(candidate)
+    const path = expandHome(candidate, env)
     if (isExecutable(path)) return path
   }
   return null

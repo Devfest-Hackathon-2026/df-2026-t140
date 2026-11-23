@@ -2,6 +2,28 @@
 // Functions の functions/src/domain/originPlaces.ts と同じ表（しおりの移動時間の見積もりに使っている）。片方を変えたら、同じ PR でもう片方も変える。
 // 位置は、このリポジトリで書いたおよその値（Maps から取ったものではない）。表にない名前は、位置が分からない扱いにする。
 
+import { stationLocation } from './stations.ts'
+import { translate as t } from '../../../shared/lib/language.ts'
+
+/** すぐ選べる出発地。英語名の照合は Functions の originPlaces.ts と合わせる */
+const SHORTCUT_NAMES: ReadonlyMap<string, string> = new Map([
+  ['東京駅', 'Tokyo Station'],
+  ['新宿駅', 'Shinjuku Station'],
+  ['渋谷駅', 'Shibuya Station'],
+  ['品川駅', 'Shinagawa Station'],
+  ['横浜駅', 'Yokohama Station'],
+  ['名古屋駅', 'Nagoya Station'],
+  ['京都駅', 'Kyoto Station'],
+  ['大阪駅', 'Osaka Station'],
+  ['博多駅', 'Hakata Station'],
+])
+
+const ENGLISH_STATIONS = new Map([...SHORTCUT_NAMES].map(([ja, en]) => [en.toLowerCase().replace(/ station$/, ''), ja]))
+
+export function originDisplayName(name: string): string {
+  return t(name, SHORTCUT_NAMES.get(name) ?? name)
+}
+
 const PLACES: readonly [name: string, lat: number, lng: number][] = [
   // 駅や空港の名前を、街の名前より先に見る（「新大阪」を「大阪」より先に）
   ['新大阪', 34.73, 135.5],
@@ -9,6 +31,8 @@ const PLACES: readonly [name: string, lat: number, lng: number][] = [
   ['羽田', 35.55, 139.78],
   ['成田', 35.77, 140.39],
   ['新宿', 35.69, 139.7],
+  ['目黒', 35.6339, 139.7158],
+  ['めぐろ', 35.6339, 139.7158],
   ['渋谷', 35.66, 139.7],
   ['品川', 35.63, 139.74],
   ['上野', 35.71, 139.78],
@@ -84,7 +108,26 @@ const PLACES: readonly [name: string, lat: number, lng: number][] = [
 
 /** 出発地の名前から、およその位置を引く。分からなければ null */
 export function originLocation(name: string): { lat: number; lng: number } | null {
-  // 「津」のような 1 文字の名前は、ほかの言葉に紛れるので、名前の先頭にあるときだけ当てる
+  return originLocationWith(name, stationLocation)
+}
+
+/**
+ * 出発地の名前から位置を引く順番（Functions の resolveOrigin と同じ順）。
+ * 1. この表と名前がちょうど同じ（「福岡」「博多駅」「羽田空港」）。同じ名前の遠くの駅（富山の福岡駅など）に当たらないように、駅の表より先に見る
+ * 2. 全国の駅の表（「浜田山駅」など。station に渡す。画面では表を読み込んだあとだけ当たる。model/stations.ts）
+ * 3. この表の名前を含む（「新大阪駅の改札」）。「津」のような 1 文字の名前は、ほかの言葉に紛れるので、名前の先頭にあるときだけ当てる
+ */
+export function originLocationWith(
+  name: string,
+  station: (name: string) => { lat: number; lng: number } | null,
+): { lat: number; lng: number } | null {
+  const input = name.normalize('NFKC').trim()
+  const stationName = input.toLowerCase().replace(/ station$/, '')
+  const normalized = ENGLISH_STATIONS.get(stationName) ?? input
+  const exact = PLACES.find(([key]) => [key, `${key}駅`, `${key}空港`].includes(normalized))
+  if (exact) return { lat: exact[1], lng: exact[2] }
+  const onLine = station(normalized)
+  if (onLine) return onLine
   const found = PLACES.find(([key]) => (key.length === 1 ? name.startsWith(key) : name.includes(key)))
   return found ? { lat: found[1], lng: found[2] } : null
 }

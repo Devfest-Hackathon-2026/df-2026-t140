@@ -60,17 +60,20 @@ const SHADOW_SIZE = 13
 
 /**
  * 模型の JSON から、three.js の物体（Group）を作る。原点は地面の真ん中、y が上。
+ * withShadow が false なら、下の影を落とさない（地面から浮かせて出す模型。影は呼ぶ側が地面に描く）。
  * 使い終わったら disposeModelObject で片付ける。
  */
-export function buildModelObject(model: ModelJson): Group {
+export function buildModelObject(model: ModelJson, withShadow = true): Group {
   const shapes = sharedGeometries()
   const group = new Group()
   const materials = new Map<string, Material>()
 
-  const shadow = new Mesh(shapes.cylinder, new MeshBasicMaterial({ color: 0x1f2937, transparent: true, opacity: 0.14, depthWrite: false }))
-  shadow.scale.set(SHADOW_SIZE, 0.02, SHADOW_SIZE)
-  shadow.position.set(0.6, 0.01, 0.6)
-  group.add(shadow)
+  if (withShadow) {
+    const shadow = new Mesh(shapes.cylinder, new MeshBasicMaterial({ color: 0x1f2937, transparent: true, opacity: 0.14, depthWrite: false }))
+    shadow.scale.set(SHADOW_SIZE, 0.02, SHADOW_SIZE)
+    shadow.position.set(0.6, 0.01, 0.6)
+    group.add(shadow)
+  }
 
   for (const part of model.parts) {
     const opacity = part.opacity ?? 1

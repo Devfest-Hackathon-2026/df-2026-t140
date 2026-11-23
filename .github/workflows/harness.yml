@@ -1,21 +1,18 @@
 name: Harness
 
-# AI 駆動開発のハーネスのチェック（docs/process/README.md）。どの PR でも走る。
+# AI 駆動開発のハーネスのチェック（docs/process/README.md）。
 # 依存を入れずに動く（ハーネスは Node の標準機能だけで書いてある）ので、数十秒で終わる。
+# PR と main への push では走らせない（ci.yml と同じ。Lazyturtle0852 の決定、2026-11-22）。同じ確認は、AI が作業を終える前に
+# 手元で走らせて PR に記録する（npm run verify:local）。手で確かめたいときだけ、Actions の画面から走らせる
 on:
-  pull_request:
-  # todo/humans/ は PR を通さず main に直接入る（docs/process/work.md）。その形をここで確かめる
-  push:
-    branches: [main]
-    paths:
-      - 'todo/humans/**'
+  workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
   harness:
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
@@ -25,7 +22,13 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version-file: .tool-versions
-      - run: git config --global user.name "harness-ci" && git config --global user.email "harness-ci@example.invalid"
+      # テスト用の git の名前とメール。全体の設定（~/.gitconfig）はジョブの一時ファイルに向けて、そこにだけ書く。
+      # 手元の Mac のランナー（vars.RUNNER）では、--global がそのまま持ち主の ~/.gitconfig を書き換え、
+      # 人と AI の commit の作者が harness-ci になったため（2026-11-18）
+      - run: |
+          echo "GIT_CONFIG_GLOBAL=$RUNNER_TEMP/harness-gitconfig" >> "$GITHUB_ENV"
+          export GIT_CONFIG_GLOBAL="$RUNNER_TEMP/harness-gitconfig"
+          git config --global user.name "harness-ci" && git config --global user.email "harness-ci@example.invalid"
       # ガードとチェックの評価用の入力セット（正常系と異常系）と、git hooks を一時リポジトリで動かすテスト
       - run: npm run test:harness
       # 機械で見る評価軸（層、作業宣言、ブランチ名、範囲、秘密情報、他社 AI の SDK、文書のリンク、人の判断）

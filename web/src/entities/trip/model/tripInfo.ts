@@ -1,4 +1,5 @@
-import { monthDayLabel, nightsLabel } from '@/shared/lib'
+import { monthDayLabel, nightsLabel, translate as t } from '@/shared/lib'
+import { originDisplayName } from './originPlaces'
 import type { Trip } from './types'
 
 /** 画面で入力する旅の基本情報（S01）。行き先は入れない（みんなで決める） */
@@ -21,18 +22,20 @@ export function normalizeTripInfo(info: TripInfo): TripInfo {
 /** 入力に足りないところがあれば、画面に出す文を返す。よければ null */
 export function tripInfoProblem(info: TripInfo): string | null {
   const { title, startDate, endDate, origin } = normalizeTripInfo(info)
-  if (!title) return '旅のタイトルを入れてください'
-  if (title.length > TRIP_TITLE_MAX) return `タイトルは ${TRIP_TITLE_MAX} 文字までです`
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(startDate)) return '開始日を選んでください'
-  if (endDate && endDate < startDate) return '終了日は開始日より後にしてください'
-  if (!origin) return '出発地を入れてください'
-  if (origin.length > TRIP_ORIGIN_MAX) return `出発地は ${TRIP_ORIGIN_MAX} 文字までです`
+  if (!title) return t('旅のタイトルを入れてください', 'Enter a trip name')
+  if (title.length > TRIP_TITLE_MAX) return t(`タイトルは ${TRIP_TITLE_MAX} 文字までです`, `Use up to ${TRIP_TITLE_MAX} characters for the trip name`)
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(startDate)) return t('開始日を選んでください', 'Choose a start date')
+  if (endDate && endDate < startDate) return t('終了日は開始日より後にしてください', 'Choose an end date after the start date')
+  if (!origin) return t('出発地を入れてください', 'Enter a departure point')
+  if (origin.length > TRIP_ORIGIN_MAX) return t(`出発地は ${TRIP_ORIGIN_MAX} 文字までです`, `Use up to ${TRIP_ORIGIN_MAX} characters for the departure point`)
   return null
 }
 
 /** 「1泊2日・11/21（土）・東京駅発」 */
 export function tripSummary(trip: TripInfo): string {
-  return `${nightsLabel(trip.startDate, trip.endDate)}・${monthDayLabel(trip.startDate)}・${trip.origin}発`
+  const duration = nightsLabel(trip.startDate, trip.endDate)
+  const date = monthDayLabel(trip.startDate)
+  return t(`${duration}・${date}・${trip.origin}発`, `${duration} · ${date} · From ${originDisplayName(trip.origin)}`)
 }
 
 /**

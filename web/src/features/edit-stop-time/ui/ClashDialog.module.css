@@ -1,0 +1,63 @@
+.dialog {
+  width: min(calc(100vw - 2 * var(--space-4)), 360px);
+  max-width: none;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-l);
+  background: var(--color-surface);
+  color: var(--color-text);
+  box-shadow: var(--shadow-float);
+}
+
+/* 開いたときは確認そのものにフォーカスを置く（ClashDialog.tsx）。確認の枠には輪郭を出さない */
+.dialog:focus {
+  outline: none;
+}
+
+.dialog::backdrop {
+  background: var(--color-overlay);
+}
+
+.dialog[open] {
+  animation: pop 180ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes pop {
+  from {
+    opacity: 0;
+    transform: scale(0.94);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dialog[open] {
+    animation: none;
+  }
+}
+
+.body {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-5) var(--space-4) var(--space-4);
+}
+
+.question {
+  margin: 0;
+  font-size: var(--font-size-l);
+  font-weight: var(--font-weight-heading);
+  text-align: center;
+}
+
+.detail {
+  margin: 0;
+  color: var(--color-text-sub);
+  font-size: var(--font-size-s);
+  text-align: center;
+}
+
+.buttons {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
+  margin-top: var(--space-2);
+}

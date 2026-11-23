@@ -1,3 +1,4 @@
+import { translate } from '@/shared/lib'
 import { usePlaceReviews } from '../model/usePlaceReviews'
 import styles from './PlaceReviews.module.css'
 
@@ -24,14 +25,14 @@ export function PlaceReviews({ tripId, pinId, ask, active }: Props) {
     <section className={styles.reviews} aria-labelledby={`reviews-${pinId}`}>
       <h3 id={`reviews-${pinId}`} className={styles.heading}>
         {state.data.sample ? (
-          '口コミの見本（開発用）'
+          translate('口コミの見本（開発用）', "Sample reviews for development")
         ) : (
           <>
-            <span translate="no">Google マップ</span>の口コミ
+            <span translate="no">{translate('Google マップ', "Google Maps")}</span>{translate('の口コミ', ' reviews')}
           </>
         )}
       </h3>
-      {state.data.reviews.length === 0 && <p className={styles.note}>この場所の口コミはまだありません</p>}
+      {state.data.reviews.length === 0 && <p className={styles.note}>{translate('この場所の口コミはまだありません', "No reviews for this place yet.")}</p>}
       {state.data.reviews.length > 0 && (
         <>
           <ul className={styles.list}>
@@ -46,19 +47,19 @@ export function PlaceReviews({ tripId, pinId, ask, active }: Props) {
                   ) : (
                     <span>{review.author}</span>
                   )}
-                  {review.rating !== null && <span className={styles.rating} aria-label={`5 点中 ${review.rating} 点`}>{'★'.repeat(Math.round(review.rating))}</span>}
+                  {review.rating !== null && <span className={styles.rating} aria-label={translate(`5 点中 ${review.rating} 点`, `${review.rating} out of 5`)}>{'★'.repeat(Math.round(review.rating))}</span>}
                   {review.relativeTime && <span className={styles.time}>{review.relativeTime}</span>}
                 </div>
                 <p className={styles.text}>{review.text}</p>
                 <div className={styles.links}>
                   {review.mapsUri && (
                     <a href={review.mapsUri} target="_blank" rel="noreferrer">
-                      Google マップで見る
+                      {translate('Google マップで見る', 'View on Google Maps')}
                     </a>
                   )}
                   {review.flagUri && (
                     <a href={review.flagUri} target="_blank" rel="noreferrer">
-                      報告する
+                      {translate('報告する', 'Report')}
                     </a>
                   )}
                 </div>
@@ -67,8 +68,8 @@ export function PlaceReviews({ tripId, pinId, ask, active }: Props) {
           </ul>
           <p className={styles.note}>
             {state.data.sample
-              ? '開発環境で見た目を確かめるための見本です。本番では Google マップの口コミが出ます。'
-              : '関連度の高い順に、最大 5 件を出しています。口コミは Google が確かめたものではありません。'}
+              ? translate('開発環境で見た目を確かめるための見本です。本番では Google マップの口コミが出ます。', "These are development samples. The live app displays Google Maps reviews.")
+              : translate('関連度の高い順に、最大 5 件を出しています。口コミは Google が確かめたものではありません。', "Showing up to five reviews, ranked by relevance. Google does not verify reviews.")}
           </p>
         </>
       )}

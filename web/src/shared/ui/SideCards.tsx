@@ -41,17 +41,17 @@ export function SideCards({ prev, next, appear = false, hideSides = false, hinta
     <div className={wrapClass}>
       {hint && (
         <p className={styles.hint} role="status">
-          左右にスワイプすると、ほかの場所に切り替わります
+          {translate('左右にスワイプすると、ほかの場所に切り替わります', 'Swipe left or right to see other places.')}
         </p>
       )}
       {/* カードの左右の端から、となりのカードが少しのぞく。押すと、スワイプと同じように移る（端の側には出さない） */}
       {prev && (
-        <button type="button" className={`${styles.side} ${styles.sidePrev}`} aria-label={`前の場所：${prev.name}`} onClick={prev.go} onAnimationEnd={endAppear}>
+        <button type="button" className={`${styles.side} ${styles.sidePrev}`} aria-label={translate(`前の場所：${prev.name}`, `Previous place: ${prev.name}`)} onClick={prev.go} onAnimationEnd={endAppear}>
           <Icon name="back" size={16} />
         </button>
       )}
       {next && (
-        <button type="button" className={`${styles.side} ${styles.sideNext}`} aria-label={`次の場所：${next.name}`} onClick={next.go} onAnimationEnd={endAppear}>
+        <button type="button" className={`${styles.side} ${styles.sideNext}`} aria-label={translate(`次の場所：${next.name}`, `Next place: ${next.name}`)} onClick={next.go} onAnimationEnd={endAppear}>
           <Icon name="chevron" size={16} />
         </button>
       )}
@@ -59,3 +59,4 @@ export function SideCards({ prev, next, appear = false, hideSides = false, hinta
     </div>
   )
 }
+import { translate } from '../lib/language'

@@ -1,5 +1,7 @@
 import { Outlet, useParams } from 'react-router'
 import { JoinTripForm } from '@/features/join-trip'
+import { GoogleLink } from '@/features/link-google'
+import { appLanguage, translate as t } from '@/shared/lib'
 import { ButtonLink, Card, ErrorText, HomeButton, Loading, Screen } from '@/shared/ui'
 import { useTripGate } from '../model/useTripGate'
 import styles from './TripGatePage.module.css'
@@ -11,7 +13,7 @@ import styles from './TripGatePage.module.css'
  */
 export function TripGatePage() {
   const { tripId = '' } = useParams()
-  const { loading, isMember, failed } = useTripGate(tripId)
+  const { loading, isMember, failed, title } = useTripGate(tripId)
 
   if (loading) return <Loading />
   if (isMember) return <Outlet />
@@ -22,23 +24,34 @@ export function TripGatePage() {
         <HomeButton />
       </div>
       <div className={styles.hero}>
-        <h1 className={styles.title}>旅に招待されています</h1>
+        <h1 className={styles.title}>
+          {!title ? t('旅に招待されています', 'You’re invited to a trip') : appLanguage === 'en' ? (
+            `You’re invited to “${title}”`
+          ) : (
+            // 「招待さ / れています」のように、言葉の途中で折り返さない
+            <>
+              「{title}」の旅に<span className={styles.phrase}>招待されています</span>
+            </>
+          )}
+        </h1>
         <p className={styles.lead}>
-          名前を入れるだけで、同じマップで一緒に計画できます。行き先はみんなで決めます。
+          {t('名前を入れるだけで、同じマップで一緒に計画できます。行き先はみんなで決めます。', 'Enter your name to plan together on a shared map. Everyone can help choose where to go.')}
         </p>
       </div>
       <Card>
         {failed ? (
           <>
-            <ErrorText>この旅を開けませんでした。電波のよいところで、もう一度開いてください。</ErrorText>
+            <ErrorText>{t('この旅を開けませんでした。電波のよいところで、もう一度開いてください。', 'Could not open this trip. Check your connection and try again.')}</ErrorText>
             <ButtonLink to="/" block>
-              ホームへ
+              {t('ホームへ', 'Back to home')}
             </ButtonLink>
           </>
         ) : (
           <JoinTripForm tripId={tripId} />
         )}
       </Card>
+      {/* 前にほかの端末で参加した人が、同じ人として入る入口。ログインしてメンバーなら、旅の画面に切り替わる */}
+      {!failed && <GoogleLink place="join" />}
     </Screen>
   )
 }
